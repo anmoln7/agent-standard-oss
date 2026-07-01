@@ -4,10 +4,18 @@
  | (_| | (_| |  __/ | | | |_  \__ \ || (_| | | | | (_| | (_| | | | (_| |
   \__,_|\__, |\___|_| |_|\__| |___/\__\__,_|_| |_|\__,_|\__,_|_|  \__,_|
         |___/
-              A house standard for AI-agent instruction files
 </pre></div>
 
-<p align="center"><strong>One source of truth · in-repo fix log · anti-drift contracts · self-healing hooks · commit &amp; deploy hygiene</strong></p>
+<h3 align="center">
+Keep AI-agent instruction files honest and single-sourced
+</h3>
+
+<p align="center">
+  <a href="STANDARD.md"><b>Standard</b></a> |
+  <a href="#quick-start"><b>Quick start</b></a> |
+  <a href="#whats-in-the-box"><b>Contents</b></a> |
+  <a href="CONTRIBUTING.md"><b>Contributing</b></a>
+</p>
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
@@ -16,43 +24,41 @@
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome">
 </p>
 
-<p align="center">
-  <a href="#the-problem">Problem</a> ·
-  <a href="#the-standard">Standard</a> ·
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#whats-in-the-box">What's in the box</a> ·
-  <a href="CONTRIBUTING.md">Contributing</a>
-</p>
-
 ---
 
-## The problem
+## About
 
-You have an AI agent (Claude Code, Codex, Cursor, Gemini) working across many repos.
-Each repo needs an instruction file — but the moment you have two (`CLAUDE.md` +
-`AGENTS.md`, or a README that half-documents things), they **drift**. A 142k-line
-instruction file that lies about the codebase is worse than none: the agent confidently
-follows stale rules, recreates deleted code, and re-learns the same gotcha every session.
+agent-standard is a small, opinionated convention for structuring the instruction
+files an AI coding agent reads (`AGENTS.md`, `CLAUDE.md`) so they stay accurate as the
+codebase changes.
 
-`agent-standard` is a small, opinionated set of conventions that keep agent-instruction
-files **honest and single-sourced**, plus a few scripts that automate the safe path.
+It exists because instruction files drift. The moment a repo has two of them, or a
+README that half-documents the same thing, they fall out of sync. An agent that reads a
+stale instruction file confidently follows dead rules, recreates deleted code, and
+relearns the same gotcha every session. agent-standard makes the files single-sourced
+and self-correcting instead.
 
-## The standard
+agent-standard keeps instruction files **honest** with:
 
-Five rules. The full spec is in **[STANDARD.md](STANDARD.md)**.
+- One source of truth: `AGENTS.md` is canonical; `CLAUDE.md` is a one-line `@AGENTS.md` include (or a symlink)
+- An in-repo fix log: `docs/solutions/`, one past bug or gotcha per file, with frontmatter for search
+- Anti-drift sync contracts: a `## Keep in sync` block naming the file pairs that must agree
+- Self-healing SessionStart hooks that repair silently-failing config before it bites
 
-| # | Rule | Why |
-|---|------|-----|
-| **1** | **One source of truth** — `AGENTS.md` is canonical; `CLAUDE.md` is a one-line `@AGENTS.md` include (or a symlink). | `AGENTS.md` is the cross-harness convention; never maintain the same content twice. |
-| **2** | **`docs/solutions/`** — a committed, frontmatter-tagged fix log. One past bug/gotcha per file. | Shared, queryable memory every agent and human sees. Inline "corrections logs" rot. |
-| **3** | **Anti-drift sync contracts** — a `## Keep in sync` block naming the file pairs that must agree. | Prose inventories rot; pin drift-prone pairs in writing (or a test). |
-| **4** | **Self-healing SessionStart hook** — only for repos with silently-failing config. | Fixes the common problem (missing dir, loose `.env` perms) before it bites. |
-| **5–7** | **Authorship, commit-flow, and deploy hygiene** — sanctioned commit identities, default-to-main, multi-account deploy safety. | Keeps history clean and deploys pointed at the right account. |
+agent-standard keeps day-to-day work **safe** with:
+
+- Sanctioned commit identities, so no stray author lands in history
+- A default-to-main commit flow, with branch + PR reserved for genuinely risky changes
+- Multi-account deploy hygiene, so a deploy never targets the wrong account
+- A pre-commit secret scan and a full-history secret audit
+
+agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
+Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
 
 ## Quick start
 
-Adopt the standard in an existing repo in five steps (full recipe in
-[STANDARD.md → Migration recipe](STANDARD.md#migration-recipe-monolithic-claudemd--standard)):
+Adopt the standard in an existing repo in four steps. The full recipe is in
+[STANDARD.md](STANDARD.md#migration-recipe-monolithic-claudemd--standard).
 
 ```bash
 # 1. Make AGENTS.md canonical, CLAUDE.md a one-line include
@@ -63,47 +69,47 @@ printf '@AGENTS.md\n' > CLAUDE.md
 mkdir -p docs/solutions
 cp path/to/agent-standard/templates/docs/solutions/EXAMPLE-*.md docs/solutions/
 
-# 3. (optional) add the self-healing hook for repos with silent-failure config
-cp -r path/to/agent-standard/templates/hooks .
+# 3. Add a "## Keep in sync" block to AGENTS.md for your drift-prone file pairs
 
-# 4. Add a "## Keep in sync" block to AGENTS.md for your drift-prone file pairs
+# 4. (optional) add the self-healing hook for repos with silent-failure config
+cp -r path/to/agent-standard/templates/hooks .
 ```
 
-Then drop the `bin/` scripts on your `PATH` for the automated safe path
-(see [What's in the box](#whats-in-the-box)).
+Then put the `bin/` scripts on your `PATH` for the automated safe path.
 
 ## What's in the box
 
 ```
-STANDARD.md                        the spec (read this)
+STANDARD.md                        the spec
 bin/                               reusable agent-workflow scripts (bash, no deps)
   repo-audit                       read-only health report across your repos
-  secrets-audit                    full-history secret scan of a repo (not just staged)
-  pr-risk / pr-approve             classify a change ROUTINE vs NOVEL; gate merges
-  land-safely                      first-pass agent code -> clean reviewed PR
-  crew / wt                        run parallel agent tasks / manage git worktrees
+  secrets-audit                    full-history secret scan of a repo, not just staged
+  pr-risk / pr-approve             classify a change routine vs novel; gate merges
+  land-safely                      first-pass agent code to a clean reviewed PR
+  crew / wt                        run parallel agent tasks; manage git worktrees
 templates/
   docs/solutions/EXAMPLE-*.md      a worked fix-log entry with the required frontmatter
   hooks/                           the SessionStart self-healing hook
-  git/                             a pre-commit hook + gitignore starter
+  git/                             a pre-commit secret-scan hook and a gitignore starter
+examples/
+  AGENTS.md                        a worked AGENTS.md that follows the standard
 ```
 
-Scripts take a config-first stance: e.g. `repo-audit` and `secrets-audit` scan
-`AGENT_STD_ROOTS` (colon-separated, defaults to `~/Documents/GitHub:~/Code:~/src`).
+Scripts are config-first. `repo-audit` and `secrets-audit` scan `AGENT_STD_ROOTS`
+(colon-separated, default `~/Documents/GitHub:~/Code:~/src`).
 
 ## Design principles
 
-- **Cross-harness.** `AGENTS.md` is read by Codex, Cursor, Gemini, and Agent Skills;
-  the `@AGENTS.md` include points Claude Code at the same file. No harness lock-in.
-- **Single-source or bust.** The only anti-pattern this fights is *duplication*. Two
-  complementary files are fine; two files with the same content are not.
-- **Config stays private.** The standard is public policy; your concrete account maps,
+- Single-source or bust. The only thing this fights is duplication. Two complementary
+  files are fine; two files with the same content are not.
+- Config stays private. The standard is public policy. Your concrete account maps,
   emails, and secrets belong in a private file or a secrets manager, never here.
+- Small and enforceable. Every rule reduces drift or it does not belong in the spec.
 
 ## Contributing
 
-PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a new
-`templates/docs/solutions/` example, a harness this standard hasn't been tested against,
+PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a new
+`templates/docs/solutions/` example, a harness this standard has not been tested against,
 or a `bin/` script that automates another safe path.
 
 ## License

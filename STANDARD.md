@@ -11,7 +11,7 @@ Apply this to any repo an AI agent (Claude Code, Codex, Cursor, Gemini) works in
 ## 1. One source of truth
 
 A repo has **one** canonical instruction file: `AGENTS.md`. It holds everything an
-agent (or human) needs to work on the repo — architecture pointer, build/test
+agent (or human) needs to work on the repo: architecture pointer, build/test
 commands, conventions, gotchas, ship rules.
 
 `CLAUDE.md` is **one line**, an include:
@@ -22,7 +22,7 @@ commands, conventions, gotchas, ship rules.
 
 Why: `AGENTS.md` is the cross-harness convention (Codex, Cursor, Gemini, Agent
 Skills all read it). Claude Code reads `CLAUDE.md`, so the include points it at the
-same canonical file. **Never maintain the same content in two files** — that is the
+same canonical file. **Never maintain the same content in two files**. That is the
 failure mode this prevents (a large monolithic instruction file drifted because there was no
 single source).
 
@@ -36,7 +36,7 @@ Leave such repos as-is.
 Tradeoff: symlinks don't survive some Windows checkouts / zip exports, where the
 `@AGENTS.md` text include is more portable. Pick per repo; both satisfy
 one-source-of-truth. Do **not** convert a working symlink to an include just for
-uniformity — it's a lateral move.
+uniformity; it is a lateral move.
 
 If a repo genuinely needs Claude-only nuance, put the `@AGENTS.md` line first, then
 the small Claude-specific addendum below it. This should be rare.
@@ -44,7 +44,7 @@ the small Claude-specific addendum below it. This should be rare.
 ### Accepted exception: a deliberate two-file split
 
 A repo may keep `CLAUDE.md` and `AGENTS.md` as **complementary** files (not
-duplicates) when the content genuinely divides by audience — e.g. `AGENTS.md` = install +
+duplicates) when the content genuinely divides by audience, e.g. `AGENTS.md` = install +
 operating protocol + routing (cross-harness onboarding), `CLAUDE.md` = architecture
 reference / key files / test layout. This is compliant
 **as long as the two never hold the same content** and a `## Keep in sync` rule
@@ -53,12 +53,12 @@ covers any overlap. The anti-pattern is *duplication*, not *two files*.
 ### AGENTS.md skeleton
 
 ```markdown
-# <Repo> — Agent Guide
+# <Repo>: Agent Guide
 
 One-sentence description of what this repo is.
 
 ## Architecture
-Where the code lives, the 3–5 things you must understand before editing.
+Where the code lives, the 3 to 5 things you must understand before editing.
 
 ## Commands
 Build / dev / test commands. The ones you actually run.
@@ -77,11 +77,11 @@ Tests, lint, build, whatever the ship gate is.
 ```
 
 Keep AGENTS.md scannable. Anything that is a *specific past incident* goes in
-`docs/solutions/`, not inline — that keeps AGENTS.md from growing without bound.
+`docs/solutions/`, not inline. That keeps AGENTS.md from growing without bound.
 
 ---
 
-## 2. `docs/solutions/` — the fix log
+## 2. `docs/solutions/`: the fix log
 
 A committed, queryable record of past bugs, fixes, and hard-won patterns. The
 in-repo, shared version of per-machine agent memory: every agent and human that
@@ -164,18 +164,18 @@ The script (template in `templates/hooks/scripts/check-config.sh`) does two
 generically-useful things, both cross-platform-guarded:
 
 - **Ensure required dirs exist** (`mkdir -p` the output/cache dir).
-- **Auto-`chmod 600` a loose-permission `.env`** and warn — so a world-readable
+- **Auto-`chmod 600` a loose-permission `.env`** and warn, so a world-readable
   secrets file gets locked down at session start.
 
 Adapt the env-file path and dir per repo. Skip the hook entirely where there's no
-silent-failure config to heal — don't add ceremony for its own sake.
+silent-failure config to heal. Do not add ceremony for its own sake.
 
 ---
 
 ## 5. Commit authorship
 
 Commits in any repo under this standard must be authored by one of a **small,
-explicit set of sanctioned identities** — no stray author (a work email, a machine
+explicit set of sanctioned identities**. No stray author (a work email, a machine
 default, a bot) should ever land in history. Pick your allowed identities and list
 them, e.g.:
 
@@ -188,7 +188,7 @@ Before committing, verify the local identity resolves to one of them:
 git config user.name && git config user.email
 ```
 
-If it doesn't, set it per-repo (`git config user.email you@example.com`) — do **not**
+If it doesn't, set it per-repo (`git config user.email you@example.com`). Do **not**
 commit under a different identity and fix it later. An agent committing on your behalf
 uses whichever sanctioned identity the repo is already configured for; if unset, fall
 back to a documented default.
@@ -200,18 +200,18 @@ commit author.
 > account, remember the hosting account is separate from commit identity, and CLIs like
 > `gh` keep only one account *active* at a time. Working in a repo owned by a non-default
 > account without switching first (`gh auth switch --user <account>`) makes reads/pushes
-> hit the wrong account, which returns a bare `404 / repository not found` — a silent
+> hit the wrong account, which returns a bare `404 / repository not found`, a silent
 > "wrong active account," not a missing repo. Note the required account at the top of that
 > repo's `AGENTS.md` and switch before any `gh`/push operation.
 
 ---
 
-## 6. Commit + push flow — default to the main branch
+## 6. Commit + push flow: default to the main branch
 
 **Default: commit straight to the default branch (`main`/`master`) and push it.** For
 solo / small-team repos, a feature branch + PR for routine work just adds ceremony and
-leaves stale branches behind (see the anti-pattern below). Complete the loop — commit and
-`git push origin <default>` — so the work is actually on the remote, not parked on a local
+leaves stale branches behind (see the anti-pattern below). Complete the loop: commit and
+`git push origin <default>`, so the work is actually on the remote, not parked on a local
 branch waiting for a second ask.
 
 **Branch + PR only when the change is risky.** Open a branch instead of committing to main
@@ -257,13 +257,13 @@ Rules for any agent about to deploy:
 3. **The deploy link is not always at the repo root.** Some projects link the deploy config
    from a subdirectory. If the root has none, find the real one
    (`find . -path '*/.vercel/project.json'`, adjust per host) and run deploy commands **from
-   that directory** — otherwise the CLI silently uses whatever account is logged in.
+   that directory**, otherwise the CLI silently uses whatever account is logged in.
 4. **Prefer stored tokens over interactive login.** A per-account token (e.g. from the OS
    keychain / a secrets manager) lets deploys run headless with `--token` and avoids
    flipping the global CLI session to the wrong account. The fix for a wrong-account error
    is the *correct account's token*, not a bare `login` that mutates global state.
 
-If the account-check reports a mismatch, stop and switch accounts — do not guess your way
+If the account-check reports a mismatch, stop and switch accounts. Do not guess your way
 through auth.
 
 > Keep the concrete account↔repo map (emails, org ids, domains) in a **private** file or a

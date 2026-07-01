@@ -1,7 +1,7 @@
 # Contributing to agent-standard
 
 Thanks for helping keep AI-agent instruction files honest. This is a small,
-opinionated project — contributions that sharpen the standard or automate a safe
+opinionated project. Contributions that sharpen the standard or automate a safe
 path are very welcome.
 
 ## Where does my contribution go?
@@ -39,10 +39,10 @@ ask:
 ## PR workflow
 
 1. Fork, branch, make the change.
-2. For a script change, include the before/after of a real run in the PR description —
-   show it actually does what it claims.
+2. For a script change, include the before/after of a real run in the PR description,
+   showing it actually does what it claims.
 3. Keep PRs focused: one rule or one script per PR.
-4. No secrets, no personal config, ever — CI (and reviewers) will reject a PR that
+4. No secrets, no personal config, ever. CI (and reviewers) will reject a PR that
    introduces an email/token/org id.
 
 ## Coding standards
