@@ -1,7 +1,8 @@
 #!/bin/bash
 # repo-audit — read-only health report for your repos. Catches the recurring
 # weaknesses: duplicates, unstandardized repos, stray downloads, un-backed-up
-# work, and tracked secret files. Prints to stdout AND writes a dated report.
+# work, and tracked secret files. Prints to stdout AND writes the report to
+# ~/.config/repo-audit/latest-report.md (the date is in the report header).
 #
 #   repo-audit            # human-readable report
 #   repo-audit --quiet    # only write the file + print the issue count (for cron)
@@ -45,8 +46,6 @@ echo ""
 # 2. Git repos missing AGENTS.md (unstandardized)
 echo "## Unstandardized repos (no AGENTS.md)"
 for r in "${repos[@]}"; do
-  base="$(basename "$r")"
-  case "$base" in _agent-standard) continue;; esac
   [ -f "$r/AGENTS.md" ] || { echo "- ${r/$HOME/~}"; issues=$((issues+1)); }
 done
 echo ""

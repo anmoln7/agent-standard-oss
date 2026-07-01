@@ -16,13 +16,21 @@ base="$(dirname "$root")/.worktrees/$repo"
 mkdir -p "$base"
 defbr="$(git symbolic-ref --short HEAD 2>/dev/null || echo main)"
 
+# A handed-out worktree is CLAIMED until `wt free`, so two parallel `wt new`
+# calls never share a tree (a just-claimed tree is still clean, so "no
+# uncommitted changes" alone is not a safe idle test). The marker lives in the
+# worktree's private git dir, outside the working tree, so it never dirties status.
+claim_file() { echo "$(git -C "$1" rev-parse --git-dir 2>/dev/null)/wt-claimed"; }
+
 cmd="${1:-new}"
 case "$cmd" in
   new|"")
-    # reuse an idle worktree (no uncommitted changes) if one exists
+    # reuse an idle worktree (unclaimed + no uncommitted changes) if one exists
     for d in "$base"/wt*; do
       [ -d "$d/.git" ] || [ -f "$d/.git" ] || continue
+      [ -e "$(claim_file "$d")" ] && continue
       if [ -z "$(git -C "$d" status --porcelain 2>/dev/null)" ]; then
+        touch "$(claim_file "$d")"
         echo "$d"; exit 0
       fi
     done
@@ -34,6 +42,7 @@ case "$cmd" in
     if ! git worktree add -q -b "wt-$repo-$n" "$p" "$start" 2>/tmp/wt.err; then
       echo "wt: failed to create worktree:" >&2; cat /tmp/wt.err >&2; exit 1
     fi
+    touch "$(claim_file "$p")"
     echo "$p"
     ;;
   status)
@@ -43,13 +52,19 @@ case "$cmd" in
     for d in "$base"/wt*; do
       [ -d "$d" ] || continue
       dirty="$(git -C "$d" status --porcelain 2>/dev/null | grep -vc node_modules)"
-      [ "${dirty:-0}" -gt 0 ] && echo "  BUSY  ${d}  ($dirty uncommitted)" || echo "  idle  ${d}"
+      if [ "${dirty:-0}" -gt 0 ]; then echo "  BUSY     ${d}  ($dirty uncommitted)"
+      elif [ -e "$(claim_file "$d")" ]; then echo "  claimed  ${d}"
+      else echo "  idle     ${d}"; fi
     done
     ;;
   free)
     [ -n "${2:-}" ] || { echo "usage: wt free <path>"; exit 1; }
-    [ -z "$(git -C "$2" status --porcelain 2>/dev/null)" ] && echo "already clean/idle: $2" \
-      || echo "NOT clean — commit/stash first: $2"
+    if [ -z "$(git -C "$2" status --porcelain 2>/dev/null)" ]; then
+      rm -f "$(claim_file "$2")" 2>/dev/null
+      echo "freed (idle, reusable): $2"
+    else
+      echo "NOT clean — commit/stash first: $2"
+    fi
     ;;
   rm)
     [ -n "${2:-}" ] || { echo "usage: wt rm <path>"; exit 1; }

@@ -11,7 +11,7 @@
 #   1. branch (off current, if on main)         [auto]
 #   2. commit staged/unstaged work              [auto, secret-scan hook runs]
 #   3. rebase onto latest origin/main           [auto, stops on conflict]
-#   4. gitleaks full-history scan               [auto, gate]
+#   4. gitleaks scan of the branch diff         [auto, gate]
 #   5. tests / lint if defined                  [auto, gate]
 #   6. >>> ADVERSARIAL REVIEW                    [hand-off: /review or /code-review]
 #   7. >>> E2E + EVIDENCE                        [hand-off: /verify, capture screenshot/log]
@@ -23,6 +23,8 @@ for a in "$@"; do [ "$a" = "--dry-run" ] && dry=1 || title="$a"; done
 [ -n "$title" ] || { echo "usage: land-safely [--dry-run] \"PR title\""; exit 1; }
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo"; exit 1; }
 run(){ echo "  \$ $*"; [ -n "$dry" ] || "$@"; }
+# gate: like run, but a nonzero exit ABORTS the pipeline (set -e is not on).
+gate(){ run "$@" || { echo "🛑 gate failed: $*  — aborting before push."; exit 1; }; }
 
 base="$(git symbolic-ref --short HEAD 2>/dev/null)"
 default="$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')"; default="${default:-main}"
@@ -55,19 +57,19 @@ if [ -z "$dry" ]; then
   fi
 else echo "  \$ git rebase origin/$default"; fi
 
-# 4. full-history secret scan (gate)
+# 4. secret scan of the branch diff (gate)
 if command -v gitleaks >/dev/null 2>&1 && [ -z "$dry" ]; then
   git diff "origin/$default"...HEAD | gitleaks stdin --redact --no-banner >/dev/null 2>&1 \
     && echo "  ✓ gitleaks clean" \
     || { echo "🛑 gitleaks found a secret in the branch diff. Aborting."; exit 1; }
 else echo "  \$ gitleaks scan (branch diff)"; fi
 
-# 5. tests / lint if the repo defines them (gate)
+# 5. tests / lint if the repo defines them (gate — a failure aborts before push)
 if [ -f package.json ]; then
-  grep -q '"test"' package.json && run npm test --silent
-  grep -q '"lint"' package.json && run npm run lint --silent
+  ! grep -q '"test"' package.json || gate npm test --silent
+  ! grep -q '"lint"' package.json || gate npm run lint --silent
 elif [ -f pyproject.toml ] || ls *_test.py test_*.py >/dev/null 2>&1; then
-  command -v pytest >/dev/null && run pytest -q
+  ! command -v pytest >/dev/null || gate pytest -q
 fi
 
 # 6 & 7. agent-driven hand-offs (cannot be faked in shell)
@@ -94,9 +96,10 @@ if [ -n "$dry" ]; then
   echo "── land-safely (dry-run) done. ──"; exit 0
 fi
 SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
-verdict="$("$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null | tail -1)"
+risk_report="$("$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null)"
+verdict="$(echo "$risk_report" | tail -1)"
 echo ""
-"$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null | sed 's/^/  /'
+echo "$risk_report" | sed 's/^/  /'
 if [ "$verdict" = "routine" ]; then
   echo "  → ROUTINE: auto-merging (squash)…"
   if gh pr merge "$branch_now" --squash --delete-branch 2>/dev/null; then
@@ -109,8 +112,8 @@ else
   gh pr edit "$branch_now" --add-label "needs-human" 2>/dev/null \
     || gh label create needs-human --color FBCA04 --description "novel change; needs human review" 2>/dev/null
   gh pr comment "$branch_now" --body "🛑 **land-safely: NOVEL change — needs your review** (not auto-merged).
-$("$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null | grep '★')
-Approve to merge; once a pattern is approved $((2))× it auto-merges next time." 2>/dev/null
+$(echo "$risk_report" | grep '★')
+Approve to merge; once a pattern is approved 2× it auto-merges next time." 2>/dev/null
   echo "  ★ NOVEL → left open for you, labeled needs-human."
   echo "    Approve with:  pr-approve $branch_now   (merges + learns the pattern)"
 fi

@@ -71,7 +71,8 @@ case "$cmd" in
     # increment each signature's count (called when you approve a PR)
     while IFS= read -r s; do
       c="$(count_for "$s")"; c="${c:-0}"; c=$((c+1))
-      grep -vP "\t${s}$" "$LOG" > "$LOG.tmp" 2>/dev/null || grep -v "	${s}$" "$LOG" > "$LOG.tmp"
+      # awk, not grep -P: BSD grep on macOS has no PCRE support.
+      awk -F'\t' -v s="$s" '$2!=s' "$LOG" > "$LOG.tmp"
       printf '%d\t%s\n' "$c" "$s" >> "$LOG.tmp"; mv "$LOG.tmp" "$LOG"
       echo "  learned: $s (now ${c}×)"
     done <<< "$sigs"
