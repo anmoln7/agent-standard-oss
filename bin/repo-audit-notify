@@ -1,0 +1,6 @@
+#!/bin/bash
+# Wrapper for launchd: run repo-audit quietly, then post a macOS notification.
+export PATH="$HOME/bin:/opt/homebrew/bin:/usr/bin:/bin:$PATH"
+"$HOME/bin/repo-audit" --quiet >/dev/null 2>&1
+count="$(cat "$HOME/.config/repo-audit/.last-count" 2>/dev/null || echo '?')"
+osascript -e "display notification \"$count issues — see ~/.config/repo-audit/latest-report.md\" with title \"repo-audit (weekly)\"" 2>/dev/null || true

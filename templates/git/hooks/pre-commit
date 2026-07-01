@@ -1,0 +1,40 @@
+#!/bin/bash
+# Global pre-commit hook (set via core.hooksPath). Applies to EVERY repo.
+# 1) Blocks commits that contain secrets (gitleaks scan of the staged diff).
+# 2) Chains to a repo-local hook if one exists, so per-repo hooks still run.
+#
+# Bypass for a genuine false positive:  git commit --no-verify
+# Disable globally:  git config --global --unset core.hooksPath
+
+set -uo pipefail
+
+# --- 1. Secret scan (fail-closed only when gitleaks is available) -----------
+# Scan the staged diff via stdin (most reliable across gitleaks versions).
+if command -v gitleaks >/dev/null 2>&1; then
+  # Write staged diff to a temp file, scan it, capture gitleaks' real exit code.
+  staged_diff="$(mktemp)"
+  git diff --staged > "$staged_diff"
+  gl_out="$(gitleaks stdin --redact --no-banner < "$staged_diff" 2>&1)"
+  gl_status=$?
+  rm -f "$staged_diff"
+  if [ "$gl_status" -ne 0 ]; then
+    echo ""
+    echo "🛑 COMMIT BLOCKED — gitleaks found a likely secret in your staged changes."
+    echo "$gl_out" | grep -iE 'finding|secret|rule|file|line|leaks found' | sed 's/^/   /' | head -30
+    echo ""
+    echo "   Fix: remove the secret (use an env var / .env, which is gitignored)."
+    echo "   False positive? Bypass once with:  git commit --no-verify"
+    exit 1
+  fi
+else
+  echo "⚠️  pre-commit: gitleaks not on PATH — secret scan SKIPPED (install: brew install gitleaks)" >&2
+fi
+
+# --- 2. Chain to a repo-local pre-commit, if present ------------------------
+# (core.hooksPath replaces .git/hooks, so honor an opt-in local hook.)
+repo_git_dir="$(git rev-parse --git-dir 2>/dev/null)"
+if [ -n "${repo_git_dir:-}" ] && [ -x "$repo_git_dir/hooks/pre-commit.local" ]; then
+  "$repo_git_dir/hooks/pre-commit.local" || exit $?
+fi
+
+exit 0

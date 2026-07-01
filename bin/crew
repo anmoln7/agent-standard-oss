@@ -1,0 +1,91 @@
+#!/bin/bash
+# crew — the "first mate": run multiple agent tasks in parallel, each in its own git
+# worktree, each landing via land-safely (auto-merge routine / hold novel). You stay
+# the captain: queue objectives, glance at the board, review only what's flagged.
+#
+#   crew add "<objective>"          # queue a task for the CURRENT repo
+#   crew add <repo-path> "<obj>"    # queue a task for another repo
+#   crew run                        # launch all queued tasks in parallel
+#   crew status                     # board: tmux session / worktrees / PRs
+#   crew attach                     # attach to the tmux session to watch
+#   crew clear                      # clear the queue
+#
+# Each task pane does:  cd <worktree> → claude -p "<objective>. When done, run
+# land-safely to open/merge a PR." → land-safely gate applies.
+#
+# Needs: claude CLI (headless via -p). tmux preferred (panes); falls back to
+# background jobs if tmux is absent.
+set -uo pipefail
+QDIR="$HOME/.config/agent-standard/crew"; mkdir -p "$QDIR"
+QUEUE="$QDIR/queue.tsv"; touch "$QUEUE"
+SESSION="crew"
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+WT="$SELF_DIR/wt"
+
+cmd="${1:-status}"; shift || true
+
+case "$cmd" in
+  add)
+    if [ $# -ge 2 ] && [ -d "$1" ]; then repo="$(cd "$1" && pwd)"; obj="$2"
+    else repo="$(git rev-parse --show-toplevel 2>/dev/null)"; obj="${1:-}"; fi
+    [ -n "${repo:-}" ] || { echo "not in a git repo and no repo path given"; exit 1; }
+    [ -n "$obj" ] || { echo "usage: crew add [repo] \"objective\""; exit 1; }
+    printf '%s\t%s\n' "$repo" "$obj" >> "$QUEUE"
+    echo "queued: [$(basename "$repo")] $obj"
+    ;;
+  clear) : > "$QUEUE"; echo "queue cleared" ;;
+  run)
+    n="$(grep -c . "$QUEUE")"; [ "$n" -gt 0 ] || { echo "queue empty — 'crew add' first"; exit 0; }
+    command -v claude >/dev/null 2>&1 || { echo "claude CLI not found"; exit 1; }
+    use_tmux=0; command -v tmux >/dev/null 2>&1 && use_tmux=1
+    [ "$use_tmux" -eq 1 ] && { tmux has-session -t "$SESSION" 2>/dev/null || tmux new-session -d -s "$SESSION" -n home; }
+    echo "Launching $n task(s)$([ "$use_tmux" -eq 1 ] && echo ' in tmux session crew' || echo ' as background jobs')…"
+    i=0
+    while IFS=$'\t' read -r repo obj; do
+      [ -n "$repo" ] || continue
+      i=$((i+1))
+      wtpath="$(cd "$repo" && "$WT" new)"
+      # Write the prompt to a temp file — robust against #, newlines, quotes, etc.
+      # (inlining it into the tmux command string truncates at '#' and breaks on newlines.)
+      pf="$QDIR/task$i.prompt"
+      cat > "$pf" <<PROMPT
+$obj
+
+When the change is complete and tested, run: land-safely "$obj"
+That opens a PR (auto-merges if routine, or leaves it for human review if novel).
+Do not push directly; do not edit unrelated files.
+PROMPT
+      # Autonomy: headless agents can't get interactive approval, so grant a SCOPED
+      # tool allowlist (edit/write files + run shell for git/tests/land-safely).
+      # Override with CREW_CLAUDE_FLAGS if you want fuller/looser autonomy.
+      # Prompt goes via STDIN (so the variadic --allowed-tools can't swallow it);
+      # tools allow-listed so the headless agent can act without interactive approval.
+      claude_flags="${CREW_CLAUDE_FLAGS:---allowed-tools Edit Write Read Bash Glob Grep}"
+      if [ "$use_tmux" -eq 1 ]; then
+        tmux new-window -t "$SESSION" -n "task$i" \
+          "cd $(printf %q "$wtpath") && cat $(printf %q "$pf") | claude -p $claude_flags; echo '--- task$i done ---'; exec $SHELL"
+        echo "  ▸ task$i  [$(basename "$repo")]  $obj   (tmux window task$i, wt: $wtpath)"
+      else
+        log="$QDIR/task$i.log"
+        ( cd "$wtpath" && claude -p $claude_flags < "$pf" >"$log" 2>&1; echo "--- done ---" >>"$log" ) &
+        echo "  ▸ task$i  [$(basename "$repo")]  $obj   (bg pid $!, log: $log)"
+      fi
+    done < "$QUEUE"
+    : > "$QUEUE"
+    echo "Queue consumed. 'crew status' for the board$([ "$use_tmux" -eq 1 ] && echo "; 'crew attach' to watch")."
+    ;;
+  status)
+    echo "── crew board ──"
+    echo "Queued (not yet run): $(grep -c . "$QUEUE")"
+    grep . "$QUEUE" 2>/dev/null | sed 's/\t/  ▸  /; s/^/   /'
+    if command -v tmux >/dev/null 2>&1 && tmux has-session -t "$SESSION" 2>/dev/null; then
+      echo "tmux windows (running tasks):"
+      tmux list-windows -t "$SESSION" -F '   #{window_name}  (#{window_panes}p, active:#{?window_active,yes,no})' 2>/dev/null
+    fi
+    echo "Background task logs: $QDIR/task*.log (tail to inspect)"
+    echo "Open PRs needing you:"
+    gh pr list --label needs-human --json number,title,headRepository --jq '.[]|"   #\(.number) \(.title)"' 2>/dev/null || echo "   (gh: run inside a repo to list)"
+    ;;
+  attach) command -v tmux >/dev/null 2>&1 && tmux attach -t "$SESSION" || echo "tmux not running" ;;
+  *) echo "crew: add | run | status | attach | clear"; exit 1 ;;
+esac

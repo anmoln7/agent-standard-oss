@@ -1,0 +1,104 @@
+#!/bin/bash
+# repo-audit — read-only health report for your repos. Catches the recurring
+# weaknesses: duplicates, unstandardized repos, stray downloads, un-backed-up
+# work, and tracked secret files. Prints to stdout AND writes a dated report.
+#
+#   repo-audit            # human-readable report
+#   repo-audit --quiet    # only write the file + print the issue count (for cron)
+set -uo pipefail
+
+# Scan roots: override with AGENT_STD_ROOTS="/path/a:/path/b" (colon-separated).
+if [ -n "${AGENT_STD_ROOTS:-}" ]; then
+  IFS=":" read -r -a ROOTS <<< "$AGENT_STD_ROOTS"
+else
+  ROOTS=("$HOME/Documents/GitHub" "$HOME/Code" "$HOME/src")
+fi
+REPORT_DIR="$HOME/.config/repo-audit"
+REPORT="$REPORT_DIR/latest-report.md"
+mkdir -p "$REPORT_DIR"
+quiet="${1:-}"
+issues=0
+
+{
+echo "# repo-audit — $(date '+%Y-%m-%d %H:%M')"
+echo ""
+
+# Collect git repos (skip deps/archives)
+repos=()
+for root in "${ROOTS[@]}"; do
+  [ -d "$root" ] || continue
+  while IFS= read -r g; do
+    repos+=("$(dirname "$g")")
+  done < <(find "$root" -maxdepth 3 -type d -name .git 2>/dev/null \
+           | grep -vE '/node_modules/|/_archive/|/_eval/')
+done
+
+# 1. Duplicate projects (same basename across paths)
+echo "## Duplicate project names (same name in >1 location)"
+printf '%s\n' "${repos[@]}" | sed "s#.*/##" | sort | uniq -d | while read -r dup; do
+  [ -z "$dup" ] && continue
+  echo "- **$dup**:"
+  printf '%s\n' "${repos[@]}" | grep -E "/$dup\$" | sed "s#$HOME#~#; s/^/    - /"
+done
+echo ""
+
+# 2. Git repos missing AGENTS.md (unstandardized)
+echo "## Unstandardized repos (no AGENTS.md)"
+for r in "${repos[@]}"; do
+  base="$(basename "$r")"
+  case "$base" in _agent-standard) continue;; esac
+  [ -f "$r/AGENTS.md" ] || { echo "- ${r/$HOME/~}"; issues=$((issues+1)); }
+done
+echo ""
+
+# 3. Uncommitted or unpushed work (risk of loss)
+echo "## Repos with uncommitted or unpushed work"
+for r in "${repos[@]}"; do
+  unc=$(git -C "$r" status --porcelain 2>/dev/null | grep -vc node_modules)
+  unp=$(git -C "$r" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+  if [ "${unc:-0}" -gt 0 ] || [ "${unp:-0}" -gt 0 ]; then
+    echo "- ${r/$HOME/~} — uncommitted: ${unc:-0}, unpushed: ${unp:-0}"
+    issues=$((issues+1))
+  fi
+done
+echo ""
+
+# 4. Tracked secret-looking files (should never be committed)
+echo "## Tracked secret-looking files (investigate)"
+for r in "${repos[@]}"; do
+  hits=$(git -C "$r" ls-files 2>/dev/null | grep -iE '(^|/)\.env($|\.)|\.pem$|_cookies.*\.json$|\.key$' | grep -vE '\.example|\.sample')
+  if [ -n "$hits" ]; then
+    echo "- ${r/$HOME/~}:"; echo "$hits" | sed 's/^/    - /'
+    issues=$((issues+1))
+  fi
+done
+echo ""
+
+# 5. Loose downloads outside _archive (sprawl) — only NON-git -main/-master
+#    dirs (true downloads) + loose zips; a -main dir that's a real git repo is fine.
+echo "## Stray downloads (non-git -main/-master dirs + zips outside _archive)"
+for root in "${ROOTS[@]}"; do
+  [ -d "$root" ] || continue
+  for p in "$root"/*-main "$root"/*-master; do
+    [ -d "$p" ] || continue
+    case "$p" in */_archive*) continue;; esac
+    [ -d "$p/.git" ] || { echo "- ${p/$HOME/~}  (no git — download)"; issues=$((issues+1)); }
+  done
+  find "$root" -maxdepth 1 -name '*.zip' 2>/dev/null | grep -v '/_archive' \
+    | sed "s#$HOME#~#; s/^/- /; s/\$/  (zip)/"
+done
+echo ""
+
+echo "---"
+echo "_Issues flagged: $issues. Run \`secrets-audit --all\` for a deep secret scan._"
+} > "$REPORT" 2>/dev/null
+
+if [ "$quiet" = "--quiet" ]; then
+  echo "repo-audit: $issues issues — $REPORT"
+else
+  cat "$REPORT"
+fi
+
+# Expose count for the launchd notifier
+echo "$issues" > "$REPORT_DIR/.last-count"
+exit 0

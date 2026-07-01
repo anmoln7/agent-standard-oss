@@ -1,0 +1,63 @@
+#!/bin/bash
+# wt — git worktree manager. Spin up / reuse /
+# free worktrees so parallel agents don't collide, without you tracking them mentally.
+# Worktrees live under  ../.worktrees/<repo>/wtN  (sibling, out of the main tree).
+#
+#   wt            # give me a worktree (reuse an idle one, else create) + print its path
+#   wt status     # list this repo's worktrees and whether each looks busy
+#   wt free <path># mark a worktree idle (does not delete; reusable)
+#   wt rm <path>  # remove a worktree
+#   wt clean      # remove all worktrees for this repo
+set -uo pipefail
+git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo"; exit 1; }
+root="$(git rev-parse --show-toplevel)"
+repo="$(basename "$root")"
+base="$(dirname "$root")/.worktrees/$repo"
+mkdir -p "$base"
+defbr="$(git symbolic-ref --short HEAD 2>/dev/null || echo main)"
+
+cmd="${1:-new}"
+case "$cmd" in
+  new|"")
+    # reuse an idle worktree (no uncommitted changes) if one exists
+    for d in "$base"/wt*; do
+      [ -d "$d/.git" ] || [ -f "$d/.git" ] || continue
+      if [ -z "$(git -C "$d" status --porcelain 2>/dev/null)" ]; then
+        echo "$d"; exit 0
+      fi
+    done
+    # else create a fresh one on a UNIQUE new branch (never check out an in-use branch).
+    n=1; while [ -e "$base/wt$n" ] || git show-ref --verify -q "refs/heads/wt-$repo-$n"; do n=$((n+1)); done
+    p="$base/wt$n"
+    # base the new branch on the local default branch's commit (fall back to HEAD).
+    start="$(git rev-parse -q --verify "$defbr" 2>/dev/null || git rev-parse HEAD)"
+    if ! git worktree add -q -b "wt-$repo-$n" "$p" "$start" 2>/tmp/wt.err; then
+      echo "wt: failed to create worktree:" >&2; cat /tmp/wt.err >&2; exit 1
+    fi
+    echo "$p"
+    ;;
+  status)
+    echo "Worktrees for $repo (main: $root):"
+    git worktree list | sed 's/^/  /'
+    echo "  --- idle/busy (under .worktrees) ---"
+    for d in "$base"/wt*; do
+      [ -d "$d" ] || continue
+      dirty="$(git -C "$d" status --porcelain 2>/dev/null | grep -vc node_modules)"
+      [ "${dirty:-0}" -gt 0 ] && echo "  BUSY  ${d}  ($dirty uncommitted)" || echo "  idle  ${d}"
+    done
+    ;;
+  free)
+    [ -n "${2:-}" ] || { echo "usage: wt free <path>"; exit 1; }
+    [ -z "$(git -C "$2" status --porcelain 2>/dev/null)" ] && echo "already clean/idle: $2" \
+      || echo "NOT clean — commit/stash first: $2"
+    ;;
+  rm)
+    [ -n "${2:-}" ] || { echo "usage: wt rm <path>"; exit 1; }
+    git worktree remove "$2" && echo "removed $2"
+    ;;
+  clean)
+    for d in "$base"/wt*; do [ -d "$d" ] && git worktree remove --force "$d" 2>/dev/null && echo "removed $d"; done
+    git worktree prune
+    ;;
+  *) echo "wt: new | status | free <path> | rm <path> | clean" ;;
+esac

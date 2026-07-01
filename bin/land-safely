@@ -1,0 +1,117 @@
+#!/bin/bash
+# land-safely — take first-pass agent code → clean reviewed PR, the "no mistakes"
+# pattern. Does the deterministic git/safety steps itself and PRINTS the
+# agent-driven checkpoints (review + e2e evidence) for Claude / you to perform — it
+# does NOT fake LLM review in shell.
+#
+#   land-safely "PR title"          # branch+commit current changes, run gates, open PR
+#   land-safely --dry-run "title"
+#
+# Pipeline:
+#   1. branch (off current, if on main)         [auto]
+#   2. commit staged/unstaged work              [auto, secret-scan hook runs]
+#   3. rebase onto latest origin/main           [auto, stops on conflict]
+#   4. gitleaks full-history scan               [auto, gate]
+#   5. tests / lint if defined                  [auto, gate]
+#   6. >>> ADVERSARIAL REVIEW                    [hand-off: /review or /code-review]
+#   7. >>> E2E + EVIDENCE                        [hand-off: /verify, capture screenshot/log]
+#   8. push + open PR via gh                     [auto]
+set -uo pipefail
+
+dry=""; title=""
+for a in "$@"; do [ "$a" = "--dry-run" ] && dry=1 || title="$a"; done
+[ -n "$title" ] || { echo "usage: land-safely [--dry-run] \"PR title\""; exit 1; }
+git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo"; exit 1; }
+run(){ echo "  \$ $*"; [ -n "$dry" ] || "$@"; }
+
+base="$(git symbolic-ref --short HEAD 2>/dev/null)"
+default="$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')"; default="${default:-main}"
+
+echo "── land-safely: \"$title\" ──"
+
+# 1. branch if on default
+target_branch="$base"
+if [ "$base" = "$default" ]; then
+  slug="land/$(echo "$title" | tr '[:upper:] ' '[:lower:]-' | tr -cd 'a-z0-9-' | cut -c1-40)"
+  target_branch="$slug"
+  run git switch -c "$slug"
+else
+  echo "  (already on branch: $base)"
+fi
+
+# 2. commit work (the global pre-commit gitleaks hook runs here)
+if [ -n "$(git status --porcelain)" ]; then
+  run git add -A
+  run git commit -m "$title"
+else
+  echo "  (nothing uncommitted to commit)"
+fi
+
+# 3. rebase onto latest default
+run git fetch -q origin "$default"
+if [ -z "$dry" ]; then
+  if ! git rebase "origin/$default"; then
+    echo "🛑 rebase conflict — resolve, then re-run land-safely. Aborting."; exit 1
+  fi
+else echo "  \$ git rebase origin/$default"; fi
+
+# 4. full-history secret scan (gate)
+if command -v gitleaks >/dev/null 2>&1 && [ -z "$dry" ]; then
+  git diff "origin/$default"...HEAD | gitleaks stdin --redact --no-banner >/dev/null 2>&1 \
+    && echo "  ✓ gitleaks clean" \
+    || { echo "🛑 gitleaks found a secret in the branch diff. Aborting."; exit 1; }
+else echo "  \$ gitleaks scan (branch diff)"; fi
+
+# 5. tests / lint if the repo defines them (gate)
+if [ -f package.json ]; then
+  grep -q '"test"' package.json && run npm test --silent
+  grep -q '"lint"' package.json && run npm run lint --silent
+elif [ -f pyproject.toml ] || ls *_test.py test_*.py >/dev/null 2>&1; then
+  command -v pytest >/dev/null && run pytest -q
+fi
+
+# 6 & 7. agent-driven hand-offs (cannot be faked in shell)
+cat <<'HANDOFF'
+
+  ── HAND-OFF: do these before the PR is trustworthy ──
+  6. ADVERSARIAL REVIEW (fresh context):  /review   (or  /code-review high)
+       fix obvious issues; escalate ambiguous/product calls to the human.
+  7. E2E + EVIDENCE:  /verify  → run the app the way a user would; capture a
+       screenshot / log / short clip proving the change works as intended.
+       Put that evidence in the PR body.
+HANDOFF
+
+# 8. push + PR
+branch_now="$target_branch"
+run git push -u origin "$branch_now"
+if command -v gh >/dev/null 2>&1; then
+  run gh pr create --fill --base "$default" --head "$branch_now"
+fi
+
+# 9. risk-gated auto-merge: routine (precedent) → merge; novel → leave for human.
+if [ -n "$dry" ]; then
+  echo "  \$ pr-risk classify  → (routine ⇒ auto-merge | novel ⇒ leave for human)"
+  echo "── land-safely (dry-run) done. ──"; exit 0
+fi
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+verdict="$("$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null | tail -1)"
+echo ""
+"$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null | sed 's/^/  /'
+if [ "$verdict" = "routine" ]; then
+  echo "  → ROUTINE: auto-merging (squash)…"
+  if gh pr merge "$branch_now" --squash --delete-branch 2>/dev/null; then
+    "$SELF_DIR/pr-risk" learn "origin/$default" >/dev/null 2>&1   # reinforce the pattern
+    echo "  ✓ merged + branch deleted."
+  else
+    echo "  ⚠ auto-merge command failed — PR left open."
+  fi
+else
+  gh pr edit "$branch_now" --add-label "needs-human" 2>/dev/null \
+    || gh label create needs-human --color FBCA04 --description "novel change; needs human review" 2>/dev/null
+  gh pr comment "$branch_now" --body "🛑 **land-safely: NOVEL change — needs your review** (not auto-merged).
+$("$SELF_DIR/pr-risk" classify "origin/$default" 2>/dev/null | grep '★')
+Approve to merge; once a pattern is approved $((2))× it auto-merges next time." 2>/dev/null
+  echo "  ★ NOVEL → left open for you, labeled needs-human."
+  echo "    Approve with:  pr-approve $branch_now   (merges + learns the pattern)"
+fi
+echo "── land-safely done. ──"

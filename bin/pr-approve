@@ -1,0 +1,20 @@
+#!/bin/bash
+# pr-approve — you approving a NOVEL PR that land-safely held back. Merges it AND
+# records its pattern as approved, so after THRESHOLD approvals it auto-merges next time.
+#
+#   pr-approve <branch-or-pr>     # merge (squash) + learn the pattern
+#   pr-approve                    # acts on the current branch
+set -uo pipefail
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+ref="${1:-$(git symbolic-ref --short HEAD 2>/dev/null)}"
+default="$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')"; default="origin/${default:-main}"
+
+echo "Approving $ref …"
+# learn the pattern BEFORE merge (branch still diffable vs base)
+"$SELF_DIR/pr-risk" learn "$default" 2>/dev/null | sed 's/^/  /'
+if gh pr merge "$ref" --squash --delete-branch 2>/dev/null; then
+  echo "  ✓ merged + branch deleted. Pattern reinforced — may auto-merge next time."
+else
+  echo "  ⚠ merge failed (resolve conflicts / check PR state)."
+  exit 1
+fi

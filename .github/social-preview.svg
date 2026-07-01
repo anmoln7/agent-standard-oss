@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1117"/>
+      <stop offset="1" stop-color="#161b22"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1280" height="8" fill="#2f81f7"/>
+  <text x="72" y="200" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="72" font-weight="700" fill="#e6edf3">agent-standard</text>
+  <text x="74" y="272" font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="32" fill="#7d8590">A house standard for AI-agent instruction files</text>
+  <g font-family="-apple-system, Segoe UI, Helvetica, Arial, sans-serif" font-size="25" fill="#adbac7">
+    <text x="74" y="368"><tspan fill="#2f81f7" font-weight="700">+</tspan>  One source of truth: AGENTS.md canonical, CLAUDE.md include</text>
+    <text x="74" y="414"><tspan fill="#2f81f7" font-weight="700">+</tspan>  In-repo fix log: docs/solutions/, one gotcha per file</text>
+    <text x="74" y="460"><tspan fill="#2f81f7" font-weight="700">+</tspan>  Anti-drift sync contracts + self-healing session hooks</text>
+    <text x="74" y="506"><tspan fill="#2f81f7" font-weight="700">+</tspan>  Safe commit and multi-account deploy hygiene</text>
+  </g>
+  <g font-family="ui-monospace, monospace" font-size="21" fill="#7d8590">
+    <text x="74" y="580">Claude Code  |  Codex  |  Cursor  |  Gemini</text>
+    <text x="1208" y="580" text-anchor="end" fill="#2f81f7">MIT</text>
+  </g>
+</svg>

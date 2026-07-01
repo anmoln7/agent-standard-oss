@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: bash syntax check
+        run: |
+          for f in bin/* templates/hooks/scripts/*.sh templates/git/hooks/*; do
+            [ -f "$f" ] || continue
+            bash -n "$f" && echo "ok: $f"
+          done
+      - name: shellcheck (non-blocking)
+        run: |
+          sudo apt-get update && sudo apt-get install -y shellcheck
+          shellcheck -S warning bin/* || true
+
+  no-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Guard against personal config leaking in
+        run: |
+          # This standard is public POLICY; personal CONFIG (emails, tokens, org ids)
+          # must never land here. Fail the build if it does.
+          if grep -rniE '@(gmail|googlemail|outlook|yahoo)\.com|team_[A-Za-z0-9]{15,}|vercel-token-[a-z]' \
+               --include='*.md' --include='*.sh' --exclude-dir=.git . ; then
+            echo "::error::Personal config (email / org id / token) found — keep it out of the public standard."
+            exit 1
+          fi
+          echo "clean: no personal config found"

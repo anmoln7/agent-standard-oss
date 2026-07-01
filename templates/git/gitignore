@@ -1,0 +1,17 @@
+**/.claude/settings.local.json
+
+# --- secrets & local junk (added by automation toolkit 2026-06-28) ---
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+*_rsa
+*_cookies*.json
+*.p12
+*.keystore
+.DS_Store
+
+# git-worktree manager (wt) scratch dirs
+.worktrees/

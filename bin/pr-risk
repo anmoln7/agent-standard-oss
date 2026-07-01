@@ -1,0 +1,84 @@
+#!/bin/bash
+# pr-risk — decide if a change is ROUTINE (auto-merge) or NOVEL (needs human).
+# Novelty, not file-type, is the bar: a pattern you've done before is routine even
+# if it touches deps/schema; a first-time pattern needs you — the novel ~5-10%.
+#
+#   pr-risk classify [base]    # print signatures + "routine"/"novel" (last line)
+#   pr-risk learn   [base]     # record this change's signatures as approved (+1 each)
+#   pr-risk patterns           # show the known-patterns log
+#
+# A signature is ROUTINE once it's been approved >= THRESHOLD times.
+# Log: ~/.config/agent-standard/known-patterns.tsv   (count <tab> signature)
+set -uo pipefail
+THRESHOLD=2
+LOG="$HOME/.config/agent-standard/known-patterns.tsv"
+mkdir -p "$(dirname "$LOG")"; touch "$LOG"
+
+base_default() {
+  local d; d="$(git remote show origin 2>/dev/null | sed -n 's/.*HEAD branch: //p')"; echo "origin/${d:-main}"
+}
+
+# Derive pattern signatures from the diff — coarse "kind of change" tags, not exact files.
+signatures() {
+  local base="$1"
+  local names status add
+  names="$(git diff --name-only "$base"...HEAD 2>/dev/null)"
+  status="$(git diff --name-status "$base"...HEAD 2>/dev/null)"
+  [ -z "$names" ] && return
+  {
+    echo "$names" | grep -qiE '\.md$|/docs/'                                   && echo "docs"
+    echo "$names" | grep -qiE 'lock|requirements\.txt|Cargo\.|go\.(mod|sum)|Gemfile' && echo "dep-change"
+    git diff "$base"...HEAD -- '*package.json' 2>/dev/null | grep -qE '^\+\s*"[^"]+":\s*"[\^~]?[0-9]' && echo "dep-change"
+    echo "$names" | grep -qiE '\.env|config|next\.config|vercel\.json|netlify' && echo "config-or-env"
+    echo "$names" | grep -qiE '\.sql$|prisma/|/migrations/'                    && echo "schema-migration"
+    echo "$names" | grep -qiE '(^|/)(auth|middleware)'                         && echo "auth-change"
+    echo "$names" | grep -qiE '\.github/workflows/'                            && echo "ci-change"
+    echo "$names" | grep -qiE '(^|/)api/|/route\.(ts|js)$'                     && echo "api-route"
+    echo "$names" | grep -qiE 'AGENTS\.md|CLAUDE\.md'                          && echo "agent-instructions"
+    echo "$names" | grep -qiE '\.(tsx|jsx)$'                                   && echo "ui-component"
+    echo "$status" | grep -qE '^(D|R)'                                         && echo "delete-or-rename"
+    # size signal
+    add="$(git diff --shortstat "$base"...HEAD 2>/dev/null | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+')"
+    [ "${add:-0}" -gt 400 ] && echo "large-diff"
+    echo "code-edit"   # always present as a catch-all baseline
+  } | sort -u
+}
+
+count_for() { awk -F'\t' -v s="$1" '$2==s{print $1}' "$LOG" | head -1; }
+
+cmd="${1:-classify}"; base="${2:-$(base_default)}"
+sigs="$(signatures "$base")"
+[ -z "$sigs" ] && { echo "(no diff vs $base)"; echo "routine"; exit 0; }
+
+case "$cmd" in
+  classify)
+    novel=0
+    echo "Change signatures (vs $base):"
+    while IFS= read -r s; do
+      c="$(count_for "$s")"; c="${c:-0}"
+      if [ "$c" -ge "$THRESHOLD" ]; then echo "  ✓ $s (seen ${c}× — routine)"
+      else echo "  ★ $s (seen ${c}× — NOVEL, need ${THRESHOLD})"; novel=1; fi
+    done <<< "$sigs"
+    if [ "$novel" -eq 1 ]; then
+      echo "→ NOVEL change: at least one unfamiliar pattern. Needs human review."
+      echo "novel"
+    else
+      echo "→ ROUTINE: every pattern has precedent. Safe to auto-merge."
+      echo "routine"
+    fi
+    ;;
+  learn)
+    # increment each signature's count (called when you approve a PR)
+    while IFS= read -r s; do
+      c="$(count_for "$s")"; c="${c:-0}"; c=$((c+1))
+      grep -vP "\t${s}$" "$LOG" > "$LOG.tmp" 2>/dev/null || grep -v "	${s}$" "$LOG" > "$LOG.tmp"
+      printf '%d\t%s\n' "$c" "$s" >> "$LOG.tmp"; mv "$LOG.tmp" "$LOG"
+      echo "  learned: $s (now ${c}×)"
+    done <<< "$sigs"
+    ;;
+  patterns)
+    echo "Known patterns (count <tab> signature), threshold=$THRESHOLD:"
+    sort -rn "$LOG" | sed 's/^/  /'
+    ;;
+  *) echo "usage: pr-risk classify|learn|patterns [base]"; exit 1 ;;
+esac
