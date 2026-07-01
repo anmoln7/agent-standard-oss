@@ -61,21 +61,29 @@ Adopt the standard in an existing repo in four steps. The full recipe is in
 [STANDARD.md](STANDARD.md#migration-recipe-monolithic-claudemd--standard).
 
 ```bash
+# Get the templates and scripts
+git clone https://github.com/anmoln7/agent-standard-oss ~/agent-standard
+
+# In your repo:
 # 1. Make AGENTS.md canonical, CLAUDE.md a one-line include
 git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md
 printf '@AGENTS.md\n' > CLAUDE.md
 
 # 2. Start a fix log
 mkdir -p docs/solutions
-cp path/to/agent-standard/templates/docs/solutions/EXAMPLE-*.md docs/solutions/
+cp ~/agent-standard/templates/docs/solutions/EXAMPLE-*.md docs/solutions/
 
 # 3. Add a "## Keep in sync" block to AGENTS.md for your drift-prone file pairs
 
 # 4. (optional) add the self-healing hook for repos with silent-failure config
-cp -r path/to/agent-standard/templates/hooks .
+cp -r ~/agent-standard/templates/hooks .
 ```
 
-Then put the `bin/` scripts on your `PATH` for the automated safe path.
+Then put the `bin/` scripts on your `PATH` for the automated safe path:
+
+```bash
+export PATH="$HOME/agent-standard/bin:$PATH"   # add to your shell profile
+```
 
 ## What's in the box
 
