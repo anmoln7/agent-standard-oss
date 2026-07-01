@@ -18,6 +18,7 @@ Keep AI-agent instruction files honest and single-sourced
 </p>
 
 <p align="center">
+  <a href="https://github.com/anmoln7/agent-standard-oss/actions/workflows/ci.yml"><img src="https://github.com/anmoln7/agent-standard-oss/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/harness-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor%20%C2%B7%20Gemini-black.svg" alt="Cross-harness">
   <img src="https://img.shields.io/badge/shell-bash-121011.svg" alt="bash">
@@ -66,7 +67,8 @@ git clone https://github.com/anmoln7/agent-standard-oss ~/agent-standard
 
 # In your repo:
 # 1. Make AGENTS.md canonical, CLAUDE.md a one-line include
-git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md
+#    (if AGENTS.md already exists, merge CLAUDE.md into it by hand instead)
+[ -f AGENTS.md ] && echo "AGENTS.md exists — merge by hand" || git mv CLAUDE.md AGENTS.md
 printf '@AGENTS.md\n' > CLAUDE.md
 
 # 2. Start a fix log
@@ -89,12 +91,16 @@ export PATH="$HOME/agent-standard/bin:$PATH"   # add to your shell profile
 
 ```
 STANDARD.md                        the spec
+AGENTS.md                          this repo's own instruction file (dogfooding the standard)
+docs/solutions/                    this repo's own fix log — real past bugs, one per file
 bin/                               reusable agent-workflow scripts (bash, no deps)
   repo-audit                       read-only health report across your repos
   secrets-audit                    full-history secret scan of a repo, not just staged
   pr-risk / pr-approve             classify a change routine vs novel; gate merges
   land-safely                      first-pass agent code to a clean reviewed PR
   crew / wt                        run parallel agent tasks; manage git worktrees
+tests/
+  run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/
   docs/solutions/EXAMPLE-*.md      a worked fix-log entry with the required frontmatter
   hooks/                           the SessionStart self-healing hook
