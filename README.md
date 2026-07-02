@@ -55,6 +55,9 @@ agent-standard keeps day-to-day work **safe** with:
 - A default-to-main commit flow, with branch + PR reserved for genuinely risky changes
 - Multi-account deploy hygiene, so a deploy never targets the wrong account
 - A pre-commit secret scan and a full-history secret audit
+- Model-routing policy for multi-model setups (escalate on quality, route by task)
+- Delegation rules for long-running work: files over context, reviews that gate,
+  continue-don't-confirm, and commit hygiene under parallel workers
 
 agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
@@ -146,6 +149,7 @@ templates/
   git/                             a pre-commit secret-scan hook and a gitignore starter
 examples/
   AGENTS.md                        a worked AGENTS.md that follows the standard
+  orchestration-workflow.md        a worked orchestrator + workers model setup (§8)
 ```
 
 Scripts are config-first. `repo-audit` and `secrets-audit` scan `AGENT_STD_ROOTS`
@@ -163,7 +167,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anmoln7/agent-standard-oss@v0.4.0
+      - uses: anmoln7/agent-standard-oss@v0.6.0
 ```
 
 Once it's green, grab the badge and add yourself to [ADOPTERS.md](ADOPTERS.md):

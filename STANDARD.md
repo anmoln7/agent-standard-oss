@@ -271,6 +271,92 @@ through auth.
 > list is *config*.
 
 ---
+
+## 8. Model routing (multi-model setups)
+
+If more than one model or agent CLI is available, keep a small ranking table of
+the models you use, scored on three axes: **cost**, **intelligence** (how hard a
+problem it can be handed unsupervised), and **taste** (UI/UX, code quality, API
+design, copy). The table is *config* — keep it private and current. This section
+is the policy for using it.
+
+- **Defaults, not limits.** The agent has standing permission to escalate: if a
+  cheaper model's output doesn't meet the bar, rerun the work with a smarter model
+  without asking. Judge the output, not the price tag — escalating costs less than
+  shipping mediocre work.
+- **Tie-break order.** For anything that ships: intelligence > taste > cost. Cost
+  is a tie-breaker only.
+- **Route by task.** Bulk/mechanical work (clear-spec implementation, migrations,
+  data analysis) → the cheapest capable model. Anything user-facing (UI, copy, API
+  design) → a high-taste model. Reviews of plans and implementations → the
+  strongest models available, ideally including a second model from a different
+  vendor as an independent perspective.
+- **Cross-vendor via CLI wrapper.** When a harness's subagent/model parameter only
+  takes its own vendor's models, reach the other vendor through its CLI: spawn a
+  thin wrapper agent whose only job is to write a self-contained prompt, run the
+  other CLI non-interactively (read-only sandbox for reviews), and return just the
+  result. Prefer token-efficient CLIs over MCP servers for this — measure a tool's
+  agent ergonomics before adopting it.
+- **The orchestrator is the scarcest resource.** In an orchestrator/worker setup,
+  the top model plans, decomposes, and synthesizes — it does not burn its own
+  budget or context on execution. Pin role subagents with one-line charters: a
+  strong-reasoning worker for architecture and hard debugging ("think thoroughly,
+  return a concise conclusion the orchestrator can act on") and a cheap fast
+  worker for mechanical edits ("execute efficiently"). Protect the orchestrator's
+  own provider more conservatively than the workers': a worker failure reroutes;
+  an orchestrator budget failure strands the whole session.
+- **A second vendor is a peer, not a rubber stamp.** Treat a strong
+  different-vendor agent as a peer senior engineer with a different perspective —
+  delegate whole problems to it, not just review passes.
+- **High-stakes decisions: consult blind, then synthesize.** Task two strong
+  models (ideally different vendors) on the same problem in parallel *without
+  showing either the other's answer*, then synthesize the best of both. Blind
+  parallel consultation avoids anchoring; a sequential second opinion inherits the
+  first answer's frame.
+
+A worked, harness-specific setup for all of this is in
+[`examples/orchestration-workflow.md`](examples/orchestration-workflow.md).
+
+---
+
+## 9. Delegation and long-running work
+
+Rules for work that spans subagents, background jobs, or hours. The theme: files
+are the state, context is scarce, and the user is not a polling target.
+
+- **Files over context.** A delegated worker whose output may be long writes its
+  findings to a file and returns a TL;DR plus the path. Returning a long report
+  inline defeats the delegation — the bytes land back in the parent's context
+  anyway. Same for logs, diffs, and review transcripts: store them, summarize,
+  link.
+- **Verification first.** Every delegated prompt starts by checking repo state and
+  its own assumptions before editing. A goal-shaped task loops plan → act → test →
+  self-review until green, and returns a converged result, never a draft.
+- **Reviews gate; absence is not approval.** Review risky work before it lands —
+  and an *adversarial* pass that challenges the design (assumptions, tradeoffs,
+  failure modes), not just the code, is worth as much as a plain one. A missing or
+  stalled review is inconclusive, not clean. Save review verdicts durably (never
+  only in /tmp), and turn reviewer misses into regression tests. When a review
+  catches a new *class* of bug, sweep the rest of the codebase for more instances
+  of that class: one catch, one class, one sweep.
+- **Continue, don't confirm.** Once scope is approved, keep working until the
+  queue drains or a real blocker appears — never poll the user with "shall I
+  continue?" prompts. Stop only for permissions, destructive or irreversible
+  actions without a plan default, or genuine product choices. Record non-blocking
+  uncertainty in a file and proceed with the plan default.
+- **Quiet is not dead.** Don't declare a long-running job failed from one stale
+  signal (a silent log, a missing PID). Reconcile several — process identity,
+  status file, output mtime, dirty tree — before discarding work. After a context
+  reset, resume from state files, not from chat memory.
+- **Commit hygiene under parallelism.** With parallel workers in flight, the
+  coordinator never runs a bare `git commit -a` — commit with explicit pathspecs
+  so one commit can't bundle another worker's work-in-progress. One commit per
+  completed chunk.
+- **Blocked workers escalate, never bypass.** A worker that hits a sandbox,
+  permission, or write block reports it and stops. Workarounds — alternate APIs,
+  out-of-path writes, git plumbing — are the coordinator's call, made in the open.
+
+---
 ## Migration recipe (monolithic CLAUDE.md → standard)
 
 1. **Back up** the current `CLAUDE.md` (scratchpad copy; `git init` + commit first

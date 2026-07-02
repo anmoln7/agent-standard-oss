@@ -3,6 +3,37 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.6.0] - 2026-07-01
+
+Two new spec sections distilled from field-tested multi-model workflows —
+de-personalized to policy, per the house rule (rankings and vendor picks are
+config; the routing rules are the standard).
+
+### Added
+
+- **STANDARD.md §8 — Model routing (multi-model setups):** keep a private
+  cost/intelligence/taste ranking table; defaults-not-limits with standing
+  permission to escalate on quality ("judge the output, not the price tag");
+  intelligence > taste > cost for anything that ships; route bulk work cheap,
+  user-facing work to taste, reviews to the strongest models across vendors;
+  cross-vendor access via thin CLI wrapper agents; the orchestrator is the
+  scarcest resource (plan/decompose/synthesize only — protect its provider more
+  conservatively than workers'); treat a strong second vendor as a peer, not a
+  rubber stamp; high-stakes decisions get blind parallel consultation, then
+  synthesis.
+- **STANDARD.md §9 — Delegation and long-running work:** files over context
+  (workers return a TL;DR + path, never a long inline report); verification-first
+  goal loops that return converged results, not drafts; reviews gate — absence is
+  inconclusive, verdicts are saved durably, reviewer misses become regression
+  tests, and one caught bug class triggers a codebase-wide sweep; continue-don't-
+  confirm; quiet-is-not-dead liveness (reconcile multiple signals, resume from
+  state files); explicit-pathspec commits under parallel workers; blocked workers
+  escalate rather than bypass.
+- **examples/orchestration-workflow.md:** a worked Claude Code setup for §8 —
+  orchestrator at max reasoning, pinned deep-reasoner and fast-worker subagents
+  with one-line charters, a second-vendor peer CLI, the AGENTS.md routing block,
+  and the tech-lead prompt shape.
+
 ## [0.5.0] - 2026-07-01
 
 Install in one line; or let Claude Code do the whole thing.
