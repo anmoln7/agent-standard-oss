@@ -190,6 +190,12 @@ PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md). Good first contributions: a
 `templates/docs/solutions/` example, a harness this standard has not been tested against,
 or a `bin/` script that automates another safe path.
 
+## Further reading
+
+Much of §1's four S's, §2's slop list, and §10's loop-safety policy is distilled
+from *Hi BOIS: Build, Observe, Iterate, Ship* by Ani Malik — the long-form
+argument for the workflow this standard encodes.
+
 ## License
 
 [MIT](LICENSE).
