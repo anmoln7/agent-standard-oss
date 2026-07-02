@@ -74,6 +74,28 @@ else
   echo "  - skipped (npm not installed)"
 fi
 
+# ── adopt: the friendly onboarding wizard ────────────────────────────────────
+echo "adopt:"
+mkdir -p "$TMP/adoptrepo" && cd "$TMP/adoptrepo" || exit 1
+printf 'My project notes\n' > CLAUDE.md
+"$BIN/adopt" --check >/dev/null 2>&1 && no "adopt --check should fail before adoption" \
+                                     || ok "adopt --check fails on an unadopted project"
+"$BIN/adopt" --yes >/dev/null 2>&1
+grep -q "My project notes" AGENTS.md 2>/dev/null && ok "existing CLAUDE.md content migrated into AGENTS.md" \
+                                                 || no "CLAUDE.md content missing from AGENTS.md"
+[ "$(head -1 CLAUDE.md)" = "@AGENTS.md" ] && ok "CLAUDE.md is the one-line include" \
+                                          || no "CLAUDE.md is not the include: $(head -1 CLAUDE.md)"
+[ -d docs/solutions ] && ok "fix-log directory created" || no "docs/solutions missing"
+"$BIN/adopt" --check >/dev/null 2>&1 && ok "adopt --check passes after adoption" \
+                                     || no "adopt --check still failing after adoption"
+"$BIN/adopt" --yes >/dev/null 2>&1   # second run must change nothing
+[ "$(grep -c '^## Keep in sync' AGENTS.md)" = "1" ] && ok "second run is idempotent (no duplicate sections)" \
+                                                    || no "duplicate Keep-in-sync sections after re-run"
+mkdir -p "$TMP/freshrepo" && cd "$TMP/freshrepo" || exit 1
+"$BIN/adopt" --yes >/dev/null 2>&1
+[ -f AGENTS.md ] && grep -q "^# freshrepo" AGENTS.md && ok "starter AGENTS.md created when none exists" \
+                                                     || no "starter AGENTS.md missing or unnamed"
+
 # ── check-config.sh: locks down a loose .env ─────────────────────────────────
 echo "check-config.sh:"
 cd "$TMP" && mkdir -p cfg && cd cfg || exit 1

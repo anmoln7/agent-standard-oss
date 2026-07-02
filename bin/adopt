@@ -1,0 +1,268 @@
+#!/bin/bash
+# adopt — a friendly five-minute onboarding for the agent standard.
+# Built for people who don't live in the terminal: it explains every step in
+# plain English, asks before changing anything, and never deletes or overwrites
+# your work.
+#
+#   adopt              # interactive walkthrough — run it inside your project folder
+#   adopt --check      # just show the scorecard, change nothing (exit 1 if gaps remain)
+#   adopt --yes        # accept every suggestion without asking (for scripts/CI)
+set -uo pipefail
+
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+TPL="$SELF_DIR/../templates"
+
+mode=interactive
+case "${1:-}" in
+  --check) mode=check ;;
+  --yes)   mode=yes ;;
+  -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  "") : ;;
+  *) echo "usage: adopt [--check|--yes]"; exit 1 ;;
+esac
+
+# pretty output; degrades to plain text when piped
+if [ -t 1 ]; then BOLD=$'\033[1m'; RST=$'\033[0m'; else BOLD=""; RST=""; fi
+
+ask(){  # ask "plain-English question" → 0 = yes
+  if [ "$mode" = "yes" ]; then echo "   → yes (auto)"; return 0; fi
+  printf '   %s [Y/n] ' "$1"
+  read -r a || a=n
+  case "$a" in n*|N*) return 1 ;; *) return 0 ;; esac
+}
+
+changed=()          # files this run touched, for the summary + optional commit
+note(){ changed+=("$1"); }
+
+# work from the project root if we're inside a git repo
+if git rev-parse --show-toplevel >/dev/null 2>&1; then
+  cd "$(git rev-parse --show-toplevel)" || exit 1
+fi
+repo_name="$(basename "$PWD")"
+
+# ── the six checks ───────────────────────────────────────────────────────────
+c_git()    { git rev-parse --git-dir >/dev/null 2>&1; }
+c_agents() { [ -f AGENTS.md ]; }
+c_claude() { [ -L CLAUDE.md ] || { [ -f CLAUDE.md ] && head -1 CLAUDE.md | grep -q '^@AGENTS.md'; }; }
+c_fixlog() { [ -d docs/solutions ]; }
+c_ignore() { [ -f .gitignore ] && grep -qE '^\.env' .gitignore; }
+c_sync()   { [ -f AGENTS.md ] && grep -q '^## Keep in sync' AGENTS.md; }
+
+score=0
+scorecard(){
+  local n=0
+  echo ""
+  echo "   ${BOLD}${repo_name} — checkup${RST}"
+  echo "   ──────────────────────────────────────────────────────────"
+  row(){ if "$1"; then echo "   ✅ $2"; n=$((n+1)); else echo "   ⬜ $2"; fi; }
+  row c_git    "Saved with git (every change can be undone)"
+  row c_agents "AGENTS.md — the one welcome note every AI assistant reads"
+  row c_claude "CLAUDE.md points at AGENTS.md (no duplicate copy to drift)"
+  row c_fixlog "docs/solutions/ — a diary of solved problems"
+  row c_ignore ".gitignore keeps secret files (.env) out of history"
+  row c_sync   "A 'Keep in sync' list so related files never disagree"
+  local bar="" i=0
+  while [ "$i" -lt 6 ]; do
+    if [ "$i" -lt "$n" ]; then bar="${bar}■"; else bar="${bar}□"; fi
+    i=$((i+1))
+  done
+  echo "   ──────────────────────────────────────────────────────────"
+  echo "   score: $n/6  $bar"
+  score=$n
+}
+
+skeleton(){  # write a starter AGENTS.md with plain-English TODOs
+  cat > AGENTS.md <<EOF
+# $repo_name — Agent Guide
+
+TODO: one sentence saying what this project is.
+
+## Architecture
+
+TODO: where the important things live — 3 to 5 bullet points.
+
+## Commands
+
+TODO: how to run / build / test this project.
+
+## Conventions
+
+TODO: house rules an assistant should follow (naming, style, "don't touch X").
+
+## Gotchas
+
+The traps. (Past-incident write-ups live in [docs/solutions/](docs/solutions/).)
+
+## Before shipping
+
+TODO: what must pass before a change counts as done (tests? a manual check?).
+
+## Keep in sync
+
+- TODO: list file pairs that must agree, e.g. "add a setting → document it in the README".
+EOF
+}
+
+sync_block(){
+  cat >> AGENTS.md <<'EOF'
+
+## Keep in sync
+
+- TODO: list file pairs that must agree, e.g. "add a setting → document it in the README".
+EOF
+}
+
+# ── welcome + first look ─────────────────────────────────────────────────────
+if [ "$mode" != "check" ]; then
+  echo ""
+  echo "   👋 ${BOLD}Hi! Let's introduce your project to its AI helpers.${RST}"
+  echo ""
+  echo "   This wizard sets up ${repo_name} so AI coding assistants (Claude Code,"
+  echo "   Codex, Cursor, Gemini) always know how it works — and never re-learn"
+  echo "   the same lesson twice. It asks before every change. Nothing is deleted."
+fi
+
+scorecard
+if [ "$mode" = "check" ]; then
+  [ "$score" -eq 6 ] && exit 0 || exit 1
+fi
+if [ "$score" -eq 6 ]; then
+  echo ""
+  echo "   🎉 Nothing to do — ${repo_name} already follows the standard!"
+  exit 0
+fi
+
+# ── step 1: git ──────────────────────────────────────────────────────────────
+if ! c_git; then
+  echo ""
+  echo "   ${BOLD}Step 1 — give your project an undo button${RST}"
+  echo "   git quietly keeps a history of every change, so nothing is ever lost."
+  if ask "Turn on git for this folder?"; then
+    git init -q && echo "   ✓ done — this folder now keeps its own history."
+  fi
+fi
+
+# ── step 2: AGENTS.md ────────────────────────────────────────────────────────
+if ! c_agents; then
+  echo ""
+  echo "   ${BOLD}Step 2 — the welcome note (AGENTS.md)${RST}"
+  echo "   One file that tells every AI assistant what this project is, how to"
+  echo "   run it, and the house rules."
+  if [ -f CLAUDE.md ] && [ ! -L CLAUDE.md ] && ! head -1 CLAUDE.md | grep -q '^@AGENTS.md'; then
+    echo "   You already have notes in CLAUDE.md — perfect, they just move to the"
+    echo "   standard filename so EVERY assistant reads them (not only Claude)."
+    if ask "Rename CLAUDE.md to AGENTS.md (contents unchanged)?"; then
+      git mv CLAUDE.md AGENTS.md 2>/dev/null || mv CLAUDE.md AGENTS.md
+      note AGENTS.md
+      echo "   ✓ moved. Nothing was lost — same words, better filename."
+    fi
+  else
+    if ask "Create a starter AGENTS.md for ${repo_name}? (fill the TODOs later)"; then
+      skeleton
+      note AGENTS.md
+      echo "   ✓ created. Plain sentences are perfect — no jargon needed."
+    fi
+  fi
+fi
+
+# ── step 3: CLAUDE.md include ────────────────────────────────────────────────
+if c_agents && ! c_claude; then
+  echo ""
+  echo "   ${BOLD}Step 3 — point Claude at the same note${RST}"
+  if [ -f CLAUDE.md ]; then
+    echo "   ⚠ You have BOTH CLAUDE.md and AGENTS.md with their own content."
+    echo "     Merging them needs a human eye (see STANDARD.md §1) — skipping this"
+    echo "     step so nothing gets lost."
+  else
+    echo "   Claude Code reads CLAUDE.md, so we make it a one-line pointer to"
+    echo "   AGENTS.md. One source of truth; nothing to keep in two places."
+    if ask "Create the one-line CLAUDE.md pointer?"; then
+      printf '@AGENTS.md\n' > CLAUDE.md
+      note CLAUDE.md
+      echo "   ✓ done."
+    fi
+  fi
+fi
+
+# ── step 4: the fix log ──────────────────────────────────────────────────────
+if ! c_fixlog; then
+  echo ""
+  echo "   ${BOLD}Step 4 — a diary of solved problems (docs/solutions/)${RST}"
+  echo "   Every time a tricky bug gets fixed, it gets one small page here — so"
+  echo "   no human or AI ever has to solve it twice."
+  if ask "Create docs/solutions/ (with one worked example)?"; then
+    mkdir -p docs/solutions
+    if ls "$TPL"/docs/solutions/EXAMPLE-*.md >/dev/null 2>&1; then
+      cp "$TPL"/docs/solutions/EXAMPLE-*.md docs/solutions/ 2>/dev/null
+    fi
+    note docs/solutions
+    echo "   ✓ created."
+  fi
+fi
+
+# ── step 5: keep secrets out ─────────────────────────────────────────────────
+if ! c_ignore; then
+  echo ""
+  echo "   ${BOLD}Step 5 — keep passwords out of the history${RST}"
+  echo "   Secret files (like .env) should never be saved into git — once they're"
+  echo "   in the history, they're very hard to remove."
+  if ask "Add the secret-file rules to .gitignore?"; then
+    printf '\n# secrets live here — never commit them (added by agent-standard adopt)\n.env\n.env.*\n!.env.example\n' >> .gitignore
+    note .gitignore
+    echo "   ✓ added."
+  fi
+fi
+
+# ── step 6: keep-in-sync list ────────────────────────────────────────────────
+if c_agents && ! c_sync; then
+  echo ""
+  echo "   ${BOLD}Step 6 — the 'Keep in sync' list${RST}"
+  echo "   A short list in AGENTS.md naming files that must agree (so when one"
+  echo "   changes, the other gets updated too — that's how notes stay honest)."
+  if ask "Add a starter 'Keep in sync' section to AGENTS.md?"; then
+    sync_block
+    note AGENTS.md
+    echo "   ✓ added — replace the TODO with your real file pairs."
+  fi
+fi
+
+# ── bonus: pre-commit secret guard ───────────────────────────────────────────
+if c_git && [ -f "$TPL/git/hooks/pre-commit" ]; then
+  hook="$(git rev-parse --git-dir)/hooks/pre-commit"
+  if [ ! -e "$hook" ]; then
+    echo ""
+    echo "   ${BOLD}Bonus — a guard that blocks accidental password commits${RST}"
+    echo "   (works best with gitleaks installed: brew install gitleaks)"
+    if ask "Install the pre-commit secret guard for this project?"; then
+      cp "$TPL/git/hooks/pre-commit" "$hook" && chmod +x "$hook"
+      echo "   ✓ installed — commits containing likely secrets will be stopped."
+    fi
+  fi
+fi
+
+# ── the after picture ────────────────────────────────────────────────────────
+scorecard
+echo ""
+if [ "$score" -eq 6 ]; then
+  echo "   🎉 ${BOLD}All set! ${repo_name} now speaks fluent AI-assistant.${RST}"
+  echo ""
+  echo "   Next (5 minutes, no jargon): open AGENTS.md and replace the TODO"
+  echo "   lines with plain sentences. That's genuinely all there is."
+else
+  echo "   Good progress — run ${BOLD}adopt${RST} again anytime to finish the rest."
+fi
+
+# offer to save exactly what we touched (never a blanket git add -A)
+if c_git && [ "${#changed[@]}" -gt 0 ]; then
+  echo ""
+  if ask "Save (commit) these changes with git?"; then
+    git add -- ${changed[@]+"${changed[@]}"} 2>/dev/null
+    if git commit -qm "adopt the agent standard" 2>/dev/null; then
+      echo "   ✓ saved. (Undo anytime with: git revert HEAD)"
+    else
+      echo "   ⚠ couldn't save automatically (git may want your name/email first)."
+      echo "     Your files are all still there — this only affects the history."
+    fi
+  fi
+fi
+echo ""

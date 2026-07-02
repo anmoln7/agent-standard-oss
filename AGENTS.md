@@ -9,7 +9,8 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
 - `STANDARD.md` — the spec. Seven numbered sections; everything else serves it.
 - `bin/` — standalone bash scripts, no runtime deps. Each is self-contained except
   `land-safely`, `pr-approve`, and `crew`, which call sibling scripts via their own
-  resolved directory (`SELF_DIR`), never via `PATH`.
+  resolved directory (`SELF_DIR`), never via `PATH`. `adopt` (the onboarding wizard)
+  also resolves `../templates` the same way, so `bin/` must stay next to `templates/`.
 - `templates/` — files users copy into their repos (hooks, gitignore, fix-log example).
 - `examples/AGENTS.md` — a worked example for a fictional repo; keep it in lockstep
   with the skeleton in STANDARD.md.

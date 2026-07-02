@@ -3,6 +3,26 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.3.0] - 2026-07-01
+
+Onboarding for humans who don't live in the terminal.
+
+### Added
+
+- **bin/adopt**: a friendly interactive wizard that adopts the standard in any
+  project. Plain-English explanations, a before/after scorecard, asks before every
+  change, never deletes or overwrites, and offers to commit exactly the files it
+  touched. `--check` prints the scorecard and exits nonzero if gaps remain (usable
+  as a CI gate in adopting repos); `--yes` runs unattended. Covered by 7 new tests.
+- README "New to this? Start here" section pointing at the wizard.
+
+### Fixed
+
+- **secrets-audit `--all`** scanned only the *first* `AGENT_STD_ROOTS` root; it now
+  iterates every colon-separated root.
+- **repo-audit** crashed on macOS's system `/bin/bash` 3.2 (`set -u` + empty array
+  expansion) when a scan found no repos; all `${repos[@]}` expansions are now guarded.
+
 ## [0.2.0] - 2026-07-01
 
 The repo now passes its own audit, and every "gate" actually gates.

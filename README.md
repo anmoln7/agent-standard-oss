@@ -12,6 +12,7 @@ Keep AI-agent instruction files honest and single-sourced
 
 <p align="center">
   <a href="STANDARD.md"><b>Standard</b></a> |
+  <a href="#new-to-this-start-here-"><b>Start here</b></a> |
   <a href="#quick-start"><b>Quick start</b></a> |
   <a href="#whats-in-the-box"><b>Contents</b></a> |
   <a href="CONTRIBUTING.md"><b>Contributing</b></a>
@@ -56,9 +57,26 @@ agent-standard keeps day-to-day work **safe** with:
 agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
 
+## New to this? Start here 🧙
+
+You don't need to know what a symlink is. The `adopt` wizard walks you through
+everything in plain English, shows your project a before/after scorecard, asks
+before every change, and never deletes anything:
+
+```bash
+git clone https://github.com/anmoln7/agent-standard-oss ~/agent-standard
+cd /path/to/your/project
+~/agent-standard/bin/adopt
+```
+
+Two minutes later your project has its welcome note (`AGENTS.md`), a diary of
+solved problems (`docs/solutions/`), and secret files locked out of history.
+Run `~/agent-standard/bin/adopt --check` anytime for the scorecard.
+
 ## Quick start
 
-Adopt the standard in an existing repo in four steps. The full recipe is in
+Prefer to do it by hand? Adopt the standard in an existing repo in four steps.
+The full recipe is in
 [STANDARD.md](STANDARD.md#migration-recipe-monolithic-claudemd--standard).
 
 ```bash
@@ -94,6 +112,7 @@ STANDARD.md                        the spec
 AGENTS.md                          this repo's own instruction file (dogfooding the standard)
 docs/solutions/                    this repo's own fix log — real past bugs, one per file
 bin/                               reusable agent-workflow scripts (bash, no deps)
+  adopt                            friendly onboarding wizard (plain English, asks first)
   repo-audit                       read-only health report across your repos
   secrets-audit                    full-history secret scan of a repo, not just staged
   pr-risk / pr-approve             classify a change routine vs novel; gate merges

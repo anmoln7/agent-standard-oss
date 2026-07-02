@@ -35,24 +35,26 @@ for root in "${ROOTS[@]}"; do
 done
 
 # 1. Duplicate projects (same basename across paths)
+# NB: ${repos[@]+...} guards — macOS /bin/bash 3.2 + set -u errors on
+# expanding an EMPTY array, so every "${repos[@]}" below uses the guard form.
 echo "## Duplicate project names (same name in >1 location)"
-printf '%s\n' "${repos[@]}" | sed "s#.*/##" | sort | uniq -d | while read -r dup; do
+printf '%s\n' ${repos[@]+"${repos[@]}"} | sed "s#.*/##" | sort | uniq -d | while read -r dup; do
   [ -z "$dup" ] && continue
   echo "- **$dup**:"
-  printf '%s\n' "${repos[@]}" | grep -E "/$dup\$" | sed "s#$HOME#~#; s/^/    - /"
+  printf '%s\n' ${repos[@]+"${repos[@]}"} | grep -E "/$dup\$" | sed "s#$HOME#~#; s/^/    - /"
 done
 echo ""
 
 # 2. Git repos missing AGENTS.md (unstandardized)
 echo "## Unstandardized repos (no AGENTS.md)"
-for r in "${repos[@]}"; do
+for r in ${repos[@]+"${repos[@]}"}; do
   [ -f "$r/AGENTS.md" ] || { echo "- ${r/$HOME/~}"; issues=$((issues+1)); }
 done
 echo ""
 
 # 3. Uncommitted or unpushed work (risk of loss)
 echo "## Repos with uncommitted or unpushed work"
-for r in "${repos[@]}"; do
+for r in ${repos[@]+"${repos[@]}"}; do
   unc=$(git -C "$r" status --porcelain 2>/dev/null | grep -vc node_modules)
   unp=$(git -C "$r" rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
   if [ "${unc:-0}" -gt 0 ] || [ "${unp:-0}" -gt 0 ]; then
@@ -64,7 +66,7 @@ echo ""
 
 # 4. Tracked secret-looking files (should never be committed)
 echo "## Tracked secret-looking files (investigate)"
-for r in "${repos[@]}"; do
+for r in ${repos[@]+"${repos[@]}"}; do
   hits=$(git -C "$r" ls-files 2>/dev/null | grep -iE '(^|/)\.env($|\.)|\.pem$|_cookies.*\.json$|\.key$' | grep -vE '\.example|\.sample')
   if [ -n "$hits" ]; then
     echo "- ${r/$HOME/~}:"; echo "$hits" | sed 's/^/    - /'
