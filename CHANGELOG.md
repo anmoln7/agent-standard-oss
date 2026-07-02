@@ -3,6 +3,30 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.7.0] - 2026-07-01
+
+One new spec section plus §9 hardening, distilled from the agentic-patterns
+canon and field notes on loop engineering — only the parts the standard didn't
+already cover, reduced to enforceable policy.
+
+### Added
+
+- **STANDARD.md §10 — Guardrails and recovery:** failures walk a planned ladder
+  (detect → retry → fallback → degrade → escalate), never silence; guard in
+  independent layers (input, output, scope); least-privilege tool allowlists per
+  dispatch; external content is data, not instructions (prompt-injection
+  discipline); escalation criteria are written into AGENTS.md, not vibed —
+  §9's continue-don't-confirm is only safe with explicit stop conditions;
+  success criteria are defined as a verifiable contract *before* work starts,
+  the author is never the sole judge of its own work, and self-reported
+  completion is a claim, not a result.
+- **STANDARD.md §9 additions:** isolation under parallelism (one worktree + one
+  branch per concurrent agent; concurrency capped by *operator review
+  bandwidth*, not machine capacity); unattended loops need breakers (runtime
+  limit, consecutive-failure threshold, deterministic stop conditions — loops
+  drift quietly rather than exploding); verifiers decay and must be audited
+  (verification debt: quality slides while outputs still compile).
+
 ## [0.6.0] - 2026-07-01
 
 Two new spec sections distilled from field-tested multi-model workflows —

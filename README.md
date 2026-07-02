@@ -58,6 +58,8 @@ agent-standard keeps day-to-day work **safe** with:
 - Model-routing policy for multi-model setups (escalate on quality, route by task)
 - Delegation rules for long-running work: files over context, reviews that gate,
   continue-don't-confirm, and commit hygiene under parallel workers
+- Guardrails and recovery: a failure ladder instead of silence, least-privilege
+  tools, injection discipline, and written escalation criteria
 
 agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
@@ -167,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anmoln7/agent-standard-oss@v0.6.0
+      - uses: anmoln7/agent-standard-oss@v0.7.0
 ```
 
 Once it's green, grab the badge and add yourself to [ADOPTERS.md](ADOPTERS.md):
