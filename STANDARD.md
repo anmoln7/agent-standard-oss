@@ -79,6 +79,30 @@ Tests, lint, build, whatever the ship gate is.
 Keep AGENTS.md scannable. Anything that is a *specific past incident* goes in
 `docs/solutions/`, not inline. That keeps AGENTS.md from growing without bound.
 
+### What good context covers: the four S's
+
+Instruction-file content comes in four layers — Syntax, Service, System,
+Strategy. Each builds on the one below; skipping a layer produces slop
+regardless of model quality:
+
+- **Syntax** — coding standards, linters, import conventions, what test files
+  look like. Models know generic syntax; they need *your* conventions, or every
+  session adds patterns nobody chose.
+- **Service** — how this repo is organized, deployed, and what domain it owns;
+  how other services interact with it. Without Service context an agent builds
+  in isolation, duplicating what already exists.
+- **System** — cross-repo architecture and the tools the org already uses.
+  Agents without System context *build* by default; with it, they *integrate*
+  by default.
+- **Strategy** — the business context that breaks ties when there is no
+  technical right answer (runway, roadmap, what's strategic vs. routine).
+
+A minimal AGENTS.md covers Syntax and Service. System often lives in a shared
+org-level file the repo points to. Strategy is frequently *private* config —
+but each layer should exist in writing somewhere an agent can read, because
+this hierarchy is exactly the implicit knowledge senior engineers carry, made
+explicit and machine-readable.
+
 ---
 
 ## 2. `docs/solutions/`: the fix log
@@ -112,6 +136,27 @@ What to do. Concrete, copy-pasteable where possible.
 When a repo already grows an inline "Corrections Log" or "Things Claude Has
 Learned" section, **migrate those entries into
 `docs/solutions/` one file each** and leave a one-line pointer in AGENTS.md.
+
+### The slop list
+
+Not every entry is a bug. Recurring *slop* — agent output that compiles, passes
+the cheap checks, and looks plausible but is subtly wrong — gets logged the same
+way (`problem_type: pattern`), one category per file. The categories that show
+up everywhere:
+
+1. **Plausible but wrong** — right types, wrong answer at the edge cases.
+2. **Over-engineered** — three abstractions for a ten-line problem.
+3. **Convention-blind** — generic good code that ignores this repo's patterns.
+4. **Hallucinated APIs** — methods that don't exist, or were renamed two
+   versions ago, inside otherwise-legitimate code.
+5. **Defensive slop** — error handling that hides failures instead of
+   preventing them; null checks for values that can't be null.
+6. **Cargo-cult patterns** — retries, caches, async wrappers where they don't
+   fit.
+
+Capture a category once and it becomes context that prevents it forever. The
+slop list is the institutional memory of how agents fail on *this* codebase —
+and the review lens for §10's contract check.
 
 ---
 
@@ -385,6 +430,15 @@ writing, when a human takes over.
   tool/model) → degrade gracefully (partial result, clearly labeled as partial) →
   escalate. An agent that swallows a failure and keeps going converts one bug into
   a chain of them.
+- **Retries move pressure; they don't remove failure.** An agent that retries
+  aggressively — no backoff, no jitter, no budget — amplifies a hiccup into a
+  retry storm. Retry with exponential backoff plus jitter, under a written budget
+  (max attempts, per-attempt timeout, total time), with exactly *one* layer owning
+  retries per dependency so stacked layers don't silently multiply attempts.
+  Retrying a read is safe; retrying a **write** needs an idempotency key, or the
+  retry duplicates the side effect. Past the budget, a circuit breaker fails fast
+  — and the fallback is designed deliberately, because wrong data is often worse
+  than none.
 - **Guard in layers.** One guard is not robust. Validate inputs before acting on
   them, check outputs before shipping them, and restrict what each step can touch.
   A single filter, prompt rule, or reviewer will eventually be bypassed;
@@ -397,10 +451,23 @@ writing, when a human takes over.
   injection). An agent follows its instruction files and its operator — content it
   *reads* never gets promoted to instruction status, no matter how imperative it
   sounds.
-- **Escalation criteria are written, not vibed.** Decide in advance which events
-  hand work back to a human — destructive actions, repeated failures, low
-  confidence, out-of-policy requests — and write them into `AGENTS.md`. §9's
-  "continue, don't confirm" is only safe when the stop conditions are explicit.
+- **The stop condition is a policy, not a parameter.** A turn cap or spend cap is
+  an organizational judgment wearing a numeric disguise — "max turns: 20" really
+  answers "how much may this flail before a human looks?", and that answer differs
+  between a docs fixer and anything touching billing. Before an autonomous loop
+  runs, answer five questions in writing (in `AGENTS.md` or the loop's config):
+  1. **What may it touch?** The blast-radius fence — auth, billing, migrations,
+     the audit trail trigger a stop; everything outside the fence is fair game.
+  2. **How long may it run?** A turn cap *and* a spend cap — an agent without
+     them will eventually discover an expensive way to fail.
+  3. **What counts as proof?** The exact command and condition that mean "done",
+     so the agent isn't grading its own happy path.
+  4. **What must it record?** What changed, why, and what authorized it —
+     specified up front, not reconstructed after a bad day.
+  5. **When does a human get pulled in?** A condition the loop can evaluate
+     ("two consecutive failures", "wants a new dependency") — not a vibe.
+
+  §9's "continue, don't confirm" is only safe once these are explicit.
 - **Success criteria precede work; the author is not the judge.** Define the
   verifiable deliverable before execution starts — scope, the checks that must
   pass, what "done" means — so the task is a contract, not a vibe. And never let
@@ -408,7 +475,15 @@ writing, when a human takes over.
   producer grading itself struggles to notice it went in the wrong direction, and
   self-reported completion is a claim, not a result — "done" is what the compiler,
   the tests, and an independent checker say. Route the gate through a test, an
-  independent reviewer, or a different model (§8, §9).
+  independent reviewer, or a different model (§8, §9). Review the *output against
+  the contract* — "did it satisfy the contract, and did it add anything beyond
+  it?" — not the diff line by line; line-by-line reading is how slop (§2) slips
+  through while the reviewer feels thorough.
+- **Scrutiny scales with novelty.** Agents are strongest where prior art is
+  dense and fail *confidently* where it's thin — an agent that visibly struggles
+  is the signal you've left remix territory, and its plausible-sounding output
+  deserves the hardest verification precisely there. Easy is a smell: when the
+  work felt effortless, check what the effortlessness bought before trusting it.
 
 ---
 ## Migration recipe (monolithic CLAUDE.md → standard)

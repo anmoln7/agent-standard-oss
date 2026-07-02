@@ -169,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anmoln7/agent-standard-oss@v0.7.0
+      - uses: anmoln7/agent-standard-oss@v0.8.0
 ```
 
 Once it's green, grab the badge and add yourself to [ADOPTERS.md](ADOPTERS.md):

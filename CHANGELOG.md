@@ -3,6 +3,39 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.8.0] - 2026-07-01
+
+The spec's core sections get their biggest upgrade: a model for what good
+context *contains*, a taxonomy for how agents fail, and concrete safety
+policy for autonomous loops.
+
+### Added
+
+- **STANDARD.md §1 — the four S's of context:** instruction-file content comes
+  in four layers — Syntax (your conventions), Service (how this repo works and
+  is deployed), System (what the org already runs; integrate-by-default), and
+  Strategy (the tie-breaking business context). Each builds on the one below;
+  skipping layers produces slop regardless of model quality.
+- **STANDARD.md §2 — the slop list:** recurring agent slop is logged in the fix
+  log like incidents, one category per file. Six named categories: plausible-
+  but-wrong, over-engineered, convention-blind, hallucinated APIs, defensive
+  slop, cargo-cult patterns. Capture a category once; it becomes context that
+  prevents it forever.
+- **STANDARD.md §10 — the five-question stop policy:** a turn cap is an
+  organizational judgment wearing a numeric disguise. Every autonomous loop
+  answers in writing: what may it touch (blast-radius fence), how long may it
+  run, what counts as proof, what must it record, when does a human get pulled
+  in.
+- **STANDARD.md §10 — retry-storm discipline:** retries move pressure, they
+  don't remove failure — exponential backoff + jitter under a written budget,
+  one layer owns retries per dependency, idempotency keys for any retried
+  write, circuit breakers past the budget, fallbacks designed deliberately.
+- **STANDARD.md §10 — sharper gates:** review output against the contract
+  ("did it satisfy it, and did it add anything beyond it?") instead of
+  line-by-line diff reading; and scrutiny scales with novelty — easy is a
+  smell, and an agent that visibly struggles marks exactly where verification
+  must be hardest.
+
 ## [0.7.0] - 2026-07-01
 
 One new spec section plus §9 hardening, distilled from the agentic-patterns

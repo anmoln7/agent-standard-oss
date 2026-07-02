@@ -1,7 +1,7 @@
 {
   "name": "agent-standard",
   "description": "Adopt and enforce the agent standard: one canonical AGENTS.md, a CLAUDE.md include, a docs/solutions/ fix log, and secret hygiene. /agent-standard:adopt runs the wizard and fills AGENTS.md in from your real codebase.",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "author": { "name": "anmoln7" },
   "homepage": "https://anmoln7.github.io/agent-standard-oss/",
   "repository": "https://github.com/anmoln7/agent-standard-oss",
