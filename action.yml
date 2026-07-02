@@ -1,0 +1,15 @@
+name: agent-standard check
+description: >-
+  Fail the build if this repo drifts from the agent standard: canonical
+  AGENTS.md, one-line CLAUDE.md include, docs/solutions/ fix log, and
+  secret files kept out of git. Prints the same scorecard as `adopt --check`.
+author: anmoln7
+branding:
+  icon: check-circle
+  color: green
+runs:
+  using: composite
+  steps:
+    - name: adopt --check
+      shell: bash
+      run: '"${{ github.action_path }}/bin/adopt" --check'

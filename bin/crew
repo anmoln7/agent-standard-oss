@@ -5,7 +5,9 @@
 #
 #   crew add "<objective>"          # queue a task for the CURRENT repo
 #   crew add <repo-path> "<obj>"    # queue a task for another repo
-#   crew run                        # launch all queued tasks in parallel
+#   crew run                        # launch queued tasks in parallel
+#                                   # (up to CREW_MAX_PARALLEL at once, default 4,
+#                                   #  0 = unlimited; the rest stay queued)
 #   crew status                     # board: tmux session / worktrees / PRs
 #   crew attach                     # attach to the tmux session to watch
 #   crew clear                      # clear the queue
@@ -37,9 +39,15 @@ case "$cmd" in
   run)
     n="$(grep -c . "$QUEUE")"; [ "$n" -gt 0 ] || { echo "queue empty — 'crew add' first"; exit 0; }
     command -v claude >/dev/null 2>&1 || { echo "claude CLI not found"; exit 1; }
+    # Cap how many agents run at once (a laptop is not a build farm). 0 = unlimited.
+    max="${CREW_MAX_PARALLEL:-4}"
+    launch="$n"; [ "$max" -gt 0 ] && [ "$n" -gt "$max" ] && launch="$max"
+    head -n "$launch" "$QUEUE" > "$QDIR/batch.tsv"
+    tail -n +"$((launch+1))" "$QUEUE" > "$QDIR/queue.rest" && mv "$QDIR/queue.rest" "$QUEUE"
     use_tmux=0; command -v tmux >/dev/null 2>&1 && use_tmux=1
     [ "$use_tmux" -eq 1 ] && { tmux has-session -t "$SESSION" 2>/dev/null || tmux new-session -d -s "$SESSION" -n home; }
-    echo "Launching $n task(s)$([ "$use_tmux" -eq 1 ] && echo ' in tmux session crew' || echo ' as background jobs')…"
+    echo "Launching $launch of $n task(s)$([ "$use_tmux" -eq 1 ] && echo ' in tmux session crew' || echo ' as background jobs')…"
+    stamp="$(date +%H%M%S)"   # unique per batch, so a second `crew run` can't clobber a running batch's files/windows
     i=0
     while IFS=$'\t' read -r repo obj; do
       [ -n "$repo" ] || continue
@@ -47,7 +55,7 @@ case "$cmd" in
       wtpath="$(cd "$repo" && "$WT" new)"
       # Write the prompt to a temp file — robust against #, newlines, quotes, etc.
       # (inlining it into the tmux command string truncates at '#' and breaks on newlines.)
-      pf="$QDIR/task$i.prompt"
+      pf="$QDIR/task-$stamp-$i.prompt"
       cat > "$pf" <<PROMPT
 $obj
 
@@ -61,18 +69,24 @@ PROMPT
       # Prompt goes via STDIN (so the variadic --allowed-tools can't swallow it);
       # tools allow-listed so the headless agent can act without interactive approval.
       claude_flags="${CREW_CLAUDE_FLAGS:---allowed-tools Edit Write Read Bash Glob Grep}"
+      task="task-$stamp-$i"
       if [ "$use_tmux" -eq 1 ]; then
-        tmux new-window -t "$SESSION" -n "task$i" \
-          "cd $(printf %q "$wtpath") && cat $(printf %q "$pf") | claude -p $claude_flags; echo '--- task$i done ---'; exec $SHELL"
-        echo "  ▸ task$i  [$(basename "$repo")]  $obj   (tmux window task$i, wt: $wtpath)"
+        tmux new-window -t "$SESSION" -n "$task" \
+          "cd $(printf %q "$wtpath") && cat $(printf %q "$pf") | claude -p $claude_flags; echo '--- $task done ---'; exec $SHELL"
+        echo "  ▸ $task  [$(basename "$repo")]  $obj   (tmux window $task, wt: $wtpath)"
       else
-        log="$QDIR/task$i.log"
+        log="$QDIR/$task.log"
         ( cd "$wtpath" && claude -p $claude_flags < "$pf" >"$log" 2>&1; echo "--- done ---" >>"$log" ) &
-        echo "  ▸ task$i  [$(basename "$repo")]  $obj   (bg pid $!, log: $log)"
+        echo "  ▸ $task  [$(basename "$repo")]  $obj   (bg pid $!, log: $log)"
       fi
-    done < "$QUEUE"
-    : > "$QUEUE"
-    echo "Queue consumed. 'crew status' for the board$([ "$use_tmux" -eq 1 ] && echo "; 'crew attach' to watch")."
+    done < "$QDIR/batch.tsv"
+    rm -f "$QDIR/batch.tsv"
+    left=$((n - launch))
+    if [ "$left" -gt 0 ]; then
+      echo "$left task(s) still queued (CREW_MAX_PARALLEL=$max) — 'crew run' again when these finish."
+    else
+      echo "Queue consumed. 'crew status' for the board$([ "$use_tmux" -eq 1 ] && echo "; 'crew attach' to watch")."
+    fi
     ;;
   status)
     echo "── crew board ──"

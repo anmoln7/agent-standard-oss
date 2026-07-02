@@ -15,6 +15,10 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
 - `examples/AGENTS.md` — a worked example for a fictional repo; keep it in lockstep
   with the skeleton in STANDARD.md.
 - `tests/run-tests.sh` — plain-bash tests; no bats, no framework.
+- `action.yml` — the repo doubles as a composite GitHub Action that runs
+  `adopt --check` in a consumer's checkout; CI dogfoods it (`uses: ./`).
+- `.github/workflows/pages.yml` + `.github/pages.css` — pandoc-built site
+  (STANDARD.md + ADOPTERS.md) deployed to anmoln7.github.io/agent-standard-oss.
 
 ## Commands
 
@@ -52,6 +56,10 @@ enforces all three.
 ## Keep in sync
 
 - Add/rename a `bin/` script → update the README "What's in the box" tree and CHANGELOG.
+- Tag a release → bump the `anmoln7/agent-standard-oss@vX.Y.Z` version in the README
+  "Enforce it in CI" example.
+- Workflow `uses:` lines stay pinned to a commit SHA with a `# vN` comment — never a
+  bare mutable tag.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).
 - Add a CI gate → mention it in CONTRIBUTING's script rules.
 - Add a fix-log frontmatter field in STANDARD.md §2 → update `templates/docs/solutions/EXAMPLE-*.md`.

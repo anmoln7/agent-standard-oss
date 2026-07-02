@@ -3,6 +3,32 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.4.0] - 2026-07-01
+
+The standard gets a face: a demo, a website, a badge, and a CI action.
+
+### Added
+
+- **GitHub Action** (`action.yml`): the repo doubles as a composite action —
+  `uses: anmoln7/agent-standard-oss@v0.4.0` after checkout runs the `adopt --check`
+  scorecard and fails the build on drift. This repo's own CI dogfoods it (`uses: ./`).
+- **ADOPTERS.md + badge**: a PR-able adopters table and an
+  `agent-standard: adopted` shields.io badge; the `adopt` wizard now mentions both
+  on a 6/6 finish.
+- **Animated demo** (`.github/demo.svg`): a hand-built animated terminal SVG of the
+  `adopt` wizard, embedded in the README — no recording tooling, crisp at any size.
+- **Website**: STANDARD.md and ADOPTERS.md rendered via pandoc and deployed to
+  GitHub Pages at <https://anmoln7.github.io/agent-standard-oss/> on every push to main.
+- **crew concurrency cap**: `CREW_MAX_PARALLEL` (default 4, `0` = unlimited) — a
+  capped `crew run` launches a batch and leaves the rest queued. Task ids are now
+  batch-stamped so a second run can't clobber a running batch's prompt files or
+  tmux windows.
+
+### Security
+
+- All workflow `uses:` lines are pinned to commit SHAs (with `# vN` comments)
+  instead of mutable tags.
+
 ## [0.3.0] - 2026-07-01
 
 Onboarding for humans who don't live in the terminal.

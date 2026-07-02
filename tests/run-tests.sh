@@ -96,6 +96,25 @@ mkdir -p "$TMP/freshrepo" && cd "$TMP/freshrepo" || exit 1
 [ -f AGENTS.md ] && grep -q "^# freshrepo" AGENTS.md && ok "starter AGENTS.md created when none exists" \
                                                      || no "starter AGENTS.md missing or unnamed"
 
+# ── crew: CREW_MAX_PARALLEL caps a batch, remainder stays queued ─────────────
+echo "crew:"
+mkdir -p "$TMP/shim"
+printf '#!/bin/sh\nexit 0\n' > "$TMP/shim/claude"
+printf '#!/bin/sh\nexit 0\n' > "$TMP/shim/tmux"
+chmod +x "$TMP/shim/claude" "$TMP/shim/tmux"
+make_repo "$TMP/crewrepo"
+PATH="$TMP/shim:$PATH" "$BIN/crew" add "$TMP/crewrepo" "task one"   >/dev/null
+PATH="$TMP/shim:$PATH" "$BIN/crew" add "$TMP/crewrepo" "task two"   >/dev/null
+PATH="$TMP/shim:$PATH" "$BIN/crew" add "$TMP/crewrepo" "task three" >/dev/null
+PATH="$TMP/shim:$PATH" CREW_MAX_PARALLEL=1 "$BIN/crew" run >/dev/null 2>&1
+queued="$(grep -c . "$HOME/.config/agent-standard/crew/queue.tsv")"
+[ "$queued" = "2" ] && ok "cap of 1 launches one task, two stay queued" \
+                    || no "expected 2 queued after capped run, got $queued"
+PATH="$TMP/shim:$PATH" CREW_MAX_PARALLEL=0 "$BIN/crew" run >/dev/null 2>&1
+queued="$(grep -c . "$HOME/.config/agent-standard/crew/queue.tsv")"
+[ "$queued" = "0" ] && ok "cap of 0 (unlimited) drains the queue" \
+                    || no "expected empty queue after unlimited run, got $queued"
+
 # ── check-config.sh: locks down a loose .env ─────────────────────────────────
 echo "check-config.sh:"
 cd "$TMP" && mkdir -p cfg && cd cfg || exit 1

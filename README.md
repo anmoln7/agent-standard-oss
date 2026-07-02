@@ -15,11 +15,13 @@ Keep AI-agent instruction files honest and single-sourced
   <a href="#new-to-this-start-here-"><b>Start here</b></a> |
   <a href="#quick-start"><b>Quick start</b></a> |
   <a href="#whats-in-the-box"><b>Contents</b></a> |
+  <a href="ADOPTERS.md"><b>Adopters</b></a> |
   <a href="CONTRIBUTING.md"><b>Contributing</b></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/anmoln7/agent-standard-oss/actions/workflows/ci.yml"><img src="https://github.com/anmoln7/agent-standard-oss/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="ADOPTERS.md"><img src="https://img.shields.io/badge/agent--standard-adopted-14b8a6" alt="agent-standard: adopted"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License: MIT"></a>
   <img src="https://img.shields.io/badge/harness-Claude%20Code%20%C2%B7%20Codex%20%C2%B7%20Cursor%20%C2%B7%20Gemini-black.svg" alt="Cross-harness">
   <img src="https://img.shields.io/badge/shell-bash-121011.svg" alt="bash">
@@ -57,6 +59,9 @@ agent-standard keeps day-to-day work **safe** with:
 agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
 
+Prefer reading on a website? The standard is rendered at
+**[anmoln7.github.io/agent-standard-oss](https://anmoln7.github.io/agent-standard-oss/)**.
+
 ## New to this? Start here 🧙
 
 You don't need to know what a symlink is. The `adopt` wizard walks you through
@@ -68,6 +73,8 @@ git clone https://github.com/anmoln7/agent-standard-oss ~/agent-standard
 cd /path/to/your/project
 ~/agent-standard/bin/adopt
 ```
+
+<p align="center"><img src=".github/demo.svg" alt="The adopt wizard: a checkup scorecard, plain-English steps, and a 6/6 finish" width="680"></p>
 
 Two minutes later your project has its welcome note (`AGENTS.md`), a diary of
 solved problems (`docs/solutions/`), and secret files locked out of history.
@@ -129,7 +136,26 @@ examples/
 ```
 
 Scripts are config-first. `repo-audit` and `secrets-audit` scan `AGENT_STD_ROOTS`
-(colon-separated, default `~/Documents/GitHub:~/Code:~/src`).
+(colon-separated, default `~/Documents/GitHub:~/Code:~/src`). `crew` launches at
+most `CREW_MAX_PARALLEL` agents at once (default 4, `0` = unlimited).
+
+## Enforce it in CI
+
+This repo doubles as a GitHub Action that runs the `adopt --check` scorecard and
+fails the build if your repo drifts from the standard:
+
+```yaml
+jobs:
+  agent-standard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: anmoln7/agent-standard-oss@v0.4.0
+```
+
+Once it's green, grab the badge and add yourself to [ADOPTERS.md](ADOPTERS.md):
+
+[![agent-standard](https://img.shields.io/badge/agent--standard-adopted-14b8a6)](https://github.com/anmoln7/agent-standard-oss)
 
 ## Design principles
 

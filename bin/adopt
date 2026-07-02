@@ -248,6 +248,9 @@ if [ "$score" -eq 6 ]; then
   echo ""
   echo "   Next (5 minutes, no jargon): open AGENTS.md and replace the TODO"
   echo "   lines with plain sentences. That's genuinely all there is."
+  echo ""
+  echo "   Want to show it off? Grab the 'adopted' badge and add your repo to"
+  echo "   https://github.com/anmoln7/agent-standard-oss/blob/main/ADOPTERS.md"
 else
   echo "   Good progress — run ${BOLD}adopt${RST} again anytime to finish the rest."
 fi

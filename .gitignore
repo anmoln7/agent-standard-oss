@@ -1,3 +1,8 @@
 .DS_Store
 *.log
 .gstack/
+
+# secrets live here — never commit them
+.env
+.env.*
+!.env.example

@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 592" font-family="SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace" font-size="13">
+  <style>
+    .l { opacity: 0; animation: reveal .35s ease-out forwards; }
+    @keyframes reveal { to { opacity: 1; } }
+    .t { fill: #c9d1d9; }
+    .dim { fill: #8b949e; }
+    .grn { fill: #3fb950; }
+    .yel { fill: #d29922; }
+    .cyn { fill: #58a6ff; }
+    .b { font-weight: 700; }
+  </style>
+  <rect width="680" height="592" rx="10" fill="#0d1117" stroke="#30363d"/>
+  <circle cx="22" cy="21" r="6" fill="#ff5f57"/>
+  <circle cx="42" cy="21" r="6" fill="#febc2e"/>
+  <circle cx="62" cy="21" r="6" fill="#28c840"/>
+  <text x="340" y="25" text-anchor="middle" class="dim" font-size="12">~/my-project — adopt</text>
+
+  <text x="24" y="62"  class="l t"   style="animation-delay:.2s"><tspan class="grn">$</tspan> adopt</text>
+  <text x="24" y="100" class="l t b" style="animation-delay:.8s">👋 Hi! Let's introduce your project to its AI helpers.</text>
+  <text x="24" y="138" class="l t b" style="animation-delay:1.4s">my-project — checkup</text>
+  <text x="24" y="157" class="l dim" style="animation-delay:1.5s">──────────────────────────────────────────────────</text>
+  <text x="24" y="176" class="l t"   style="animation-delay:1.7s">⬜ Saved with git (every change can be undone)</text>
+  <text x="24" y="195" class="l t"   style="animation-delay:1.9s">⬜ AGENTS.md — the one welcome note every AI assistant reads</text>
+  <text x="24" y="214" class="l t"   style="animation-delay:2.1s">⬜ CLAUDE.md points at AGENTS.md (no duplicate copy to drift)</text>
+  <text x="24" y="233" class="l t"   style="animation-delay:2.3s">⬜ docs/solutions/ — a diary of solved problems</text>
+  <text x="24" y="252" class="l t"   style="animation-delay:2.5s">⬜ .gitignore keeps secret files (.env) out of history</text>
+  <text x="24" y="271" class="l t"   style="animation-delay:2.7s">⬜ A 'Keep in sync' list so related files never disagree</text>
+  <text x="24" y="290" class="l yel" style="animation-delay:3.1s">score: 0/6  □□□□□□</text>
+
+  <text x="24" y="328" class="l t b" style="animation-delay:3.9s">Step 1 — give your project an undo button</text>
+  <text x="24" y="347" class="l t"   style="animation-delay:4.4s">Turn on git for this folder? [Y/n] <tspan class="cyn">y</tspan></text>
+  <text x="24" y="366" class="l grn" style="animation-delay:4.9s">✓ done — this folder now keeps its own history.</text>
+
+  <text x="24" y="404" class="l t b" style="animation-delay:5.6s">Step 2 — the welcome note (AGENTS.md)</text>
+  <text x="24" y="423" class="l t"   style="animation-delay:6.1s">Create a starter AGENTS.md for my-project? [Y/n] <tspan class="cyn">y</tspan></text>
+  <text x="24" y="442" class="l grn" style="animation-delay:6.6s">✓ created. Plain sentences are perfect — no jargon needed.</text>
+
+  <text x="24" y="480" class="l dim" style="animation-delay:7.3s">⋮  four more quick steps (fix log, secrets, keep-in-sync, guard)</text>
+
+  <text x="24" y="518" class="l grn b" style="animation-delay:8.2s">score: 6/6  ■■■■■■</text>
+  <text x="24" y="556" class="l t b"   style="animation-delay:8.9s">🎉 All set! my-project now speaks fluent AI-assistant.</text>
+</svg>
