@@ -64,15 +64,26 @@ Prefer reading on a website? The standard is rendered at
 
 ## New to this? Start here 🧙
 
-You don't need to know what a symlink is. The `adopt` wizard walks you through
-everything in plain English, shows your project a before/after scorecard, asks
-before every change, and never deletes anything:
+You don't need to know what a symlink is. One line installs everything, then the
+`adopt` wizard walks you through the rest in plain English — a before/after
+scorecard, a question before every change, and nothing ever deleted:
 
 ```bash
-git clone https://github.com/anmoln7/agent-standard-oss ~/agent-standard
+curl -fsSL https://raw.githubusercontent.com/anmoln7/agent-standard-oss/main/install.sh | bash
 cd /path/to/your/project
-~/agent-standard/bin/adopt
+adopt
 ```
+
+**Even easier — let Claude Code do the whole thing.** Install the plugin once, then
+one command runs the wizard *and* fills in your AGENTS.md from the actual codebase:
+
+```
+/plugin marketplace add anmoln7/agent-standard-oss
+/plugin install agent-standard@agent-standard
+/agent-standard:adopt
+```
+
+(`/agent-standard:check` shows the read-only scorecard anytime.)
 
 <p align="center"><img src=".github/demo.svg" alt="The adopt wizard: a checkup scorecard, plain-English steps, and a 6/6 finish" width="680"></p>
 
@@ -116,6 +127,8 @@ export PATH="$HOME/agent-standard/bin:$PATH"   # add to your shell profile
 
 ```
 STANDARD.md                        the spec
+install.sh                         one-line installer (curl | bash, no sudo)
+.claude-plugin/ + commands/        Claude Code plugin: /agent-standard:adopt, :check
 AGENTS.md                          this repo's own instruction file (dogfooding the standard)
 docs/solutions/                    this repo's own fix log — real past bugs, one per file
 bin/                               reusable agent-workflow scripts (bash, no deps)

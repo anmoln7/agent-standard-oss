@@ -3,6 +3,25 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.5.0] - 2026-07-01
+
+Install in one line; or let Claude Code do the whole thing.
+
+### Added
+
+- **`install.sh`**: `curl -fsSL .../install.sh | bash` installs to
+  `~/.agent-standard`, puts the scripts on PATH (symlinks into `~/.local/bin` when
+  it's already on PATH, else one profile line), is idempotent, needs no sudo, and
+  touches nothing outside `$HOME`.
+- **Claude Code plugin** (`.claude-plugin/` + `commands/`): add the repo as a
+  marketplace and install the `agent-standard` plugin, then
+  `/agent-standard:adopt` runs the wizard **and** fills in the AGENTS.md TODOs from
+  the real codebase (verified commands only, no invented content);
+  `/agent-standard:check` shows the read-only scorecard with plain-language
+  explanations.
+- Installer and plugin-metadata tests (19 total); `install.sh` covered by the CI
+  syntax and shellcheck gates.
+
 ## [0.4.0] - 2026-07-01
 
 The standard gets a face: a demo, a website, a badge, and a CI action.

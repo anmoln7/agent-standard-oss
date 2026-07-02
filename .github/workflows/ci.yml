@@ -14,7 +14,7 @@ jobs:
       - name: bash syntax check
         run: |
           status=0
-          for f in bin/* tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/*; do
+          for f in bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/*; do
             [ -f "$f" ] || continue
             if bash -n "$f"; then echo "ok: $f"; else echo "SYNTAX ERROR: $f"; status=1; fi
           done
@@ -22,7 +22,7 @@ jobs:
       - name: shellcheck
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck
-          shellcheck -S warning bin/* tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
+          shellcheck -S warning bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
 
   tests:
     runs-on: ubuntu-latest

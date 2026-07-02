@@ -1,0 +1,13 @@
+{
+  "name": "agent-standard",
+  "owner": { "name": "anmoln7" },
+  "plugins": [
+    {
+      "name": "agent-standard",
+      "source": "./",
+      "description": "Adopt and enforce the agent standard (AGENTS.md canonical, CLAUDE.md include, fix log, secret hygiene). Commands: /agent-standard:adopt, /agent-standard:check.",
+      "version": "0.5.0",
+      "author": { "name": "anmoln7" }
+    }
+  ]
+}

@@ -17,6 +17,11 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
 - `tests/run-tests.sh` — plain-bash tests; no bats, no framework.
 - `action.yml` — the repo doubles as a composite GitHub Action that runs
   `adopt --check` in a consumer's checkout; CI dogfoods it (`uses: ./`).
+- `install.sh` — the `curl | bash` one-liner; must stay fully non-interactive
+  (stdin is the pipe) and touch nothing outside `$HOME`.
+- `.claude-plugin/` + `commands/` — the repo is also a Claude Code plugin
+  (`/agent-standard:adopt`, `/agent-standard:check`); commands reach the scripts
+  via `${CLAUDE_PLUGIN_ROOT}/bin/`.
 - `.github/workflows/pages.yml` + `.github/pages.css` — pandoc-built site
   (STANDARD.md + ADOPTERS.md) deployed to anmoln7.github.io/agent-standard-oss.
 
@@ -24,8 +29,8 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
 
 ```bash
 tests/run-tests.sh                    # the test suite (isolated HOME + temp repos)
-bash -n bin/*                         # syntax check
-shellcheck -S warning bin/* tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
+bash -n bin/* install.sh              # syntax check
+shellcheck -S warning bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
 ```
 
 ## Conventions
@@ -57,7 +62,8 @@ enforces all three.
 
 - Add/rename a `bin/` script → update the README "What's in the box" tree and CHANGELOG.
 - Tag a release → bump the `anmoln7/agent-standard-oss@vX.Y.Z` version in the README
-  "Enforce it in CI" example.
+  "Enforce it in CI" example AND the `version` in `.claude-plugin/plugin.json` +
+  `.claude-plugin/marketplace.json`.
 - Workflow `uses:` lines stay pinned to a commit SHA with a `# vN` comment — never a
   bare mutable tag.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).

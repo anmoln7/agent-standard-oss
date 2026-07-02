@@ -115,6 +115,28 @@ queued="$(grep -c . "$HOME/.config/agent-standard/crew/queue.tsv")"
 [ "$queued" = "0" ] && ok "cap of 0 (unlimited) drains the queue" \
                     || no "expected empty queue after unlimited run, got $queued"
 
+# ── install.sh: one-liner installer ──────────────────────────────────────────
+echo "install.sh:"
+ROOT="$(cd "$BIN/.." && pwd)"
+idir="$TMP/installhome"; mkdir -p "$idir"
+HOME="$idir" SHELL=/bin/zsh AGENT_STD_REPO="$ROOT" AGENT_STD_HOME="$idir/.agent-standard" \
+  bash "$ROOT/install.sh" >/dev/null 2>&1
+[ -x "$idir/.agent-standard/bin/adopt" ] && ok "installer clones and adopt is executable" \
+                                         || no "adopt missing/not executable after install"
+HOME="$idir" SHELL=/bin/zsh AGENT_STD_REPO="$ROOT" AGENT_STD_HOME="$idir/.agent-standard" \
+  bash "$ROOT/install.sh" >/dev/null 2>&1
+[ "$(grep -c 'agent-standard' "$idir/.zshrc")" = "1" ] && ok "re-run doesn't duplicate the PATH line" \
+                                                       || no "PATH line duplicated on re-run"
+
+# ── plugin metadata: valid JSON ───────────────────────────────────────────────
+if command -v jq >/dev/null 2>&1; then
+  echo "plugin:"
+  jq -e .name "$ROOT/.claude-plugin/plugin.json" >/dev/null 2>&1 \
+    && jq -e '.plugins[0].name' "$ROOT/.claude-plugin/marketplace.json" >/dev/null 2>&1 \
+    && ok "plugin.json and marketplace.json are valid JSON with names" \
+    || no "plugin metadata invalid"
+fi
+
 # ── check-config.sh: locks down a loose .env ─────────────────────────────────
 echo "check-config.sh:"
 cd "$TMP" && mkdir -p cfg && cd cfg || exit 1
