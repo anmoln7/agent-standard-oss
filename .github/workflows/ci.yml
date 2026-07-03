@@ -23,6 +23,14 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck
           shellcheck -S warning bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
+      - name: CRLF regression check
+        run: |
+          status=0
+          for f in bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/*; do
+            [ -f "$f" ] || continue
+            if grep -qU $'\r' "$f"; then echo "CRLF FOUND: $f"; status=1; fi
+          done
+          exit "$status"
 
   tests:
     runs-on: ubuntu-latest

@@ -69,6 +69,21 @@ Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No l
 Prefer reading on a website? The standard is rendered at
 **[anmoln7.github.io/agent-standard-oss](https://anmoln7.github.io/agent-standard-oss/)**.
 
+## Automation boundary
+
+This project mixes two layers with different trust levels. Know which one you're
+opting into:
+
+| Layer | What it does | Trust level |
+| --- | --- | --- |
+| **Instruction drift control** | `AGENTS.md` + `CLAUDE.md` include, `docs/solutions/` fix log, `## Keep in sync` blocks | Docs-only — no code runs, nothing is installed |
+| **Read-only checks** | `adopt --check`, `repo-audit`, the `standard-compliance` CI action | Read-only — scans and reports, changes nothing |
+| **Local hooks** | `templates/hooks/` (SessionStart self-healing) and `templates/git/hooks/pre-commit` (secret scan) | Local automation — runs on your machine, you review the template before copying it in |
+| **Write-capable automation** | `adopt` (interactive/`--yes`), `land-safely`, `pr-approve`, `crew` | Write-capable — commits, pushes, or drives multi-agent work |
+
+Start at the top of the table and move down only as far as you want. The docs-only
+lane below needs none of the write-capable layer.
+
 ## New to this? Start here 🧙
 
 You don't need to know what a symlink is. One line installs everything, then the
@@ -96,7 +111,8 @@ one command runs the wizard *and* fills in your AGENTS.md from the actual codeba
 
 Two minutes later your project has its welcome note (`AGENTS.md`), a diary of
 solved problems (`docs/solutions/`), and secret files locked out of history.
-Run `~/agent-standard/bin/adopt --check` anytime for the scorecard.
+Run `~/agent-standard/bin/adopt --check` anytime for the scorecard, or
+`adopt --check --json` for a machine-readable version to pipe into other tooling.
 
 ## Quick start
 
@@ -130,11 +146,37 @@ Then put the `bin/` scripts on your `PATH` for the automated safe path:
 export PATH="$HOME/agent-standard/bin:$PATH"   # add to your shell profile
 ```
 
+### Docs-only / read-only adoption
+
+Some teams want the instruction standard without any hooks, commit helpers, or
+`PATH` automation. This lane is entirely docs-only plus one read-only check —
+nothing here runs code beyond `adopt --check` scanning your files:
+
+```bash
+git clone https://github.com/anmoln7/agent-standard-oss ~/agent-standard
+
+# 1. Make AGENTS.md canonical, CLAUDE.md a one-line include
+[ -f AGENTS.md ] && echo "AGENTS.md exists — merge by hand" || git mv CLAUDE.md AGENTS.md
+printf '@AGENTS.md\n' > CLAUDE.md
+
+# 2. Start a fix log
+mkdir -p docs/solutions
+cp ~/agent-standard/templates/docs/solutions/EXAMPLE-*.md docs/solutions/
+
+# 3. Check compliance — read-only, changes nothing
+~/agent-standard/bin/adopt --check
+```
+
+No hooks are installed, no `bin/` scripts touch your `PATH`, and nothing commits
+on your behalf. Layer in local hooks or write-capable automation later, if ever —
+see the automation boundary table above.
+
 ## What's in the box
 
 ```
 STANDARD.md                        the spec
 install.sh                         one-line installer (curl | bash, no sudo)
+.gitattributes                     forces LF on shell scripts (Windows/CRLF checkouts)
 .claude-plugin/ + commands/        Claude Code plugin: /agent-standard:adopt, :check
 AGENTS.md                          this repo's own instruction file (dogfooding the standard)
 docs/solutions/                    this repo's own fix log — real past bugs, one per file

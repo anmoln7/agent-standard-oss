@@ -6,6 +6,7 @@
 #
 #   adopt              # interactive walkthrough — run it inside your project folder
 #   adopt --check      # just show the scorecard, change nothing (exit 1 if gaps remain)
+#   adopt --check --json  # scorecard as machine-readable JSON, change nothing
 #   adopt --yes        # accept every suggestion without asking (for scripts/CI)
 set -uo pipefail
 
@@ -13,13 +14,19 @@ SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
 TPL="$SELF_DIR/../templates"
 
 mode=interactive
-case "${1:-}" in
-  --check) mode=check ;;
-  --yes)   mode=yes ;;
-  -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-  "") : ;;
-  *) echo "usage: adopt [--check|--yes]"; exit 1 ;;
-esac
+json=0
+for a in "$@"; do
+  case "$a" in
+    --check) mode=check ;;
+    --yes)   mode=yes ;;
+    --json)  json=1 ;;
+    -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "usage: adopt [--check [--json]|--yes]"; exit 1 ;;
+  esac
+done
+if [ "$json" = 1 ] && [ "$mode" != "check" ]; then
+  echo "usage: --json is only valid with --check"; exit 1
+fi
 
 # pretty output; degrades to plain text when piped
 if [ -t 1 ]; then BOLD=$'\033[1m'; RST=$'\033[0m'; else BOLD=""; RST=""; fi
@@ -49,7 +56,26 @@ c_ignore() { [ -f .gitignore ] && grep -qE '^\.env' .gitignore; }
 c_sync()   { [ -f AGENTS.md ] && grep -q '^## Keep in sync' AGENTS.md; }
 
 score=0
+scorecard_json(){
+  local n=0 first=1
+  printf '{"repo":"%s","checks":[' "$repo_name"
+  jrow(){ # jrow <fn> <key>
+    [ "$first" = 1 ] || printf ','
+    first=0
+    if "$1"; then printf '{"key":"%s","pass":true}' "$2"; n=$((n+1)); else printf '{"key":"%s","pass":false}' "$2"; fi
+  }
+  jrow c_git    git
+  jrow c_agents agents_md
+  jrow c_claude claude_md_include
+  jrow c_fixlog fix_log
+  jrow c_ignore gitignore_env
+  jrow c_sync   keep_in_sync
+  printf '],"score":%d,"total":6}\n' "$n"
+  score=$n
+}
+
 scorecard(){
+  if [ "$json" = 1 ]; then scorecard_json; return; fi
   local n=0
   echo ""
   echo "   ${BOLD}${repo_name} — checkup${RST}"

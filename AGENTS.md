@@ -24,6 +24,8 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   via `${CLAUDE_PLUGIN_ROOT}/bin/`.
 - `.github/workflows/pages.yml` + `.github/pages.css` — pandoc-built site
   (STANDARD.md + ADOPTERS.md) deployed to anmoln7.github.io/agent-standard-oss.
+- `.gitattributes` — forces LF on shell scripts so a CRLF checkout (e.g. Windows)
+  can't break `bin/`, `install.sh`, or the test suite; CI's CRLF check backs it up.
 
 ## Commands
 
@@ -69,6 +71,8 @@ enforces all three.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).
 - Add a CI gate → mention it in CONTRIBUTING's script rules.
 - Add a fix-log frontmatter field in STANDARD.md §2 → update `templates/docs/solutions/EXAMPLE-*.md`.
+- Add a shell script to a globbed path (`bin/`, `templates/**/*.sh`, etc.) → confirm
+  it's covered by `.gitattributes`' `eol=lf` patterns, or add a new pattern.
 
 ## Commit flow
 
