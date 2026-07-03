@@ -60,6 +60,8 @@ agent-standard keeps day-to-day work **safe** with:
   tools, injection discipline, and written escalation criteria
 - Knowledge succession: turning one person's tacit repo knowledge into a
   ground-truth-verified skill library that outlives them and runs on cheaper models
+- Continuous agent-authorship disclosure, so agent-generated commits and PR
+  activity are never invisible
 
 agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
@@ -146,7 +148,7 @@ bin/                               reusable agent-workflow scripts (bash, no dep
 tests/
   run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/
-  docs/solutions/EXAMPLE-*.md      a worked fix-log entry with the required frontmatter
+  docs/solutions/EXAMPLE-*.md      two worked fix-log entries with the required frontmatter
   hooks/                           the SessionStart self-healing hook
   git/                             a pre-commit secret-scan hook and a gitignore starter
 examples/
@@ -169,7 +171,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anmoln7/agent-standard-oss@v0.9.0
+      - uses: anmoln7/agent-standard-oss@v0.10.0
 ```
 
 Once it's green, grab the badge and add yourself to [ADOPTERS.md](ADOPTERS.md):

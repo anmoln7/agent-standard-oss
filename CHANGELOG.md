@@ -3,6 +3,29 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.10.0] - 2026-07-02
+
+Two practices worth stealing from a much larger project-scaffolding toolkit —
+not its methodology (out of scope here), but its hard-won repo hygiene.
+
+### Added
+
+- **STANDARD.md §5 — Agent-authorship disclosure:** disclosure is continuous,
+  not a one-time PR note. Every agent-authored commit carries an
+  `Assisted-by:`/`Co-Authored-By:` trailer naming the agent and whether it
+  acted autonomously or under supervision — a human git identity on the
+  commit does not exempt it. Agents disclose their own identity in PR/issue
+  comments and restate it each review round. No fake-review theater: an
+  inhumanly fast "reviewed and tested by me" turnaround is itself a signal of
+  automation, not something to paper over.
+- **templates/docs/solutions/EXAMPLE-stale-editable-install.md:** a second
+  worked fix-log example — the sneaky Python environment-contamination
+  pattern where a stale editable install in another checkout makes `pytest`
+  resolve a brand-new module to a different worktree's stale namespace
+  package, even though `python -c "import ..."` works fine. Copied into new
+  repos alongside the existing SEO example, so `docs/solutions/` starts
+  seeded with two genuinely different problem shapes.
+
 ## [0.9.0] - 2026-07-02
 
 A new section for a problem the standard hadn't addressed: knowledge that

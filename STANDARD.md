@@ -241,6 +241,25 @@ back to a documented default.
 Co-author trailers (`Co-Authored-By:`) for the agent are fine and don't count as the
 commit author.
 
+### Agent-authorship disclosure
+
+Separate from *whose identity* a commit carries is *whether the work was
+agent-generated at all* — and that must never be invisible. Disclosure is
+**continuous**, not a one-time note:
+
+- **Every agent-authored commit carries an `Assisted-by:` (or `Co-Authored-By:`)
+  trailer** naming the agent and whether it acted autonomously or under direct
+  human supervision. A human git identity on the commit does not exempt it —
+  the trailer states agent involvement regardless of whose name is on the
+  author line.
+- **Agents disclose their own identity in PR and issue comments** they post,
+  and **restate it each round** — a disclosure in the PR body does not cover
+  commits or comments added later in review.
+- **No fake-review theater.** Do not reply "done" or push a fix within seconds
+  of a review comment without disclosing that the response was agent-generated.
+  An inhumanly fast turnaround is itself a signal of automation, not something
+  to paper over with "reviewed and tested by me."
+
 > **Multi-account hosting.** If your repos live under more than one GitHub (or GitLab)
 > account, remember the hosting account is separate from commit identity, and CLIs like
 > `gh` keep only one account *active* at a time. Working in a repo owned by a non-default
