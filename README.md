@@ -58,6 +58,8 @@ agent-standard keeps day-to-day work **safe** with:
   continue-don't-confirm, and commit hygiene under parallel workers
 - Guardrails and recovery: a failure ladder instead of silence, least-privilege
   tools, injection discipline, and written escalation criteria
+- Knowledge succession: turning one person's tacit repo knowledge into a
+  ground-truth-verified skill library that outlives them and runs on cheaper models
 
 agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
@@ -167,7 +169,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: anmoln7/agent-standard-oss@v0.8.0
+      - uses: anmoln7/agent-standard-oss@v0.9.0
 ```
 
 Once it's green, grab the badge and add yourself to [ADOPTERS.md](ADOPTERS.md):

@@ -486,6 +486,50 @@ writing, when a human takes over.
   work felt effortless, check what the effortlessness bought before trusting it.
 
 ---
+
+## 11. Knowledge succession (skill libraries)
+
+`AGENTS.md` (§1) and the fix log (§2) cover a repo's day-to-day operating
+knowledge. Some repos also carry knowledge that lives only in one person's
+head — the debugging instincts, the settled arguments, the unwritten rules
+nobody documented because the senior engineer just *knew* them. When that
+knowledge needs to survive the person, or needs to run on a cheaper model than
+the one that holds it today, generalize it into a **skill library**
+(`.claude/skills/<name>/SKILL.md` or the harness-equivalent path) instead of
+letting it stay tacit.
+
+- **Discover before you write.** Read the repo like an incoming engineer
+  first — history, docs, tests, CI, the trail of reverted or abandoned
+  attempts — then ask a small, bounded number of questions for what the repo
+  genuinely cannot tell you (the hardest live problem, the unwritten
+  discipline rules, who the audience is and what they don't know). Fold the
+  answers into the library; don't author from assumption.
+- **One skill, one topic — no duplicate homes for a fact.** Split a library by
+  concern (architecture, debugging, config, domain reference, validation
+  discipline, the hardest live problem as its own guided runbook) rather than
+  one sprawling file. Each skill states when *not* to use it and which sibling
+  to use instead, so a loader doesn't have to guess.
+- **Ground truth only.** Every command, flag, path, and claim gets verified
+  against the repo before it's written down — a wrong runbook is worse than
+  no runbook, because it's trusted. Unproven or open items stay explicitly
+  labeled as such; nothing in the library may contradict `AGENTS.md` or route
+  around this standard's ship gates.
+- **Provenance and re-verification.** Date-stamp anything that can drift
+  (config defaults, flag lists, tool versions) and give each skill a one-line
+  command that re-checks it. A skill without a re-verification path decays
+  into the exact stale-instruction problem §1 exists to prevent.
+- **Write-scope discipline.** A skill-authoring pass writes only inside the
+  skills directory; it doesn't mutate the rest of the repo. Keep the authoring
+  and review passes separate — author, then have an independent pass check
+  facts, check for contradictions between skills or with `AGENTS.md`, and
+  check that a zero-context reader could actually follow each one.
+
+This is expensive relative to a normal `AGENTS.md` update, so reserve it for
+knowledge that is genuinely at risk of being lost or that must run on a
+materially cheaper model than the one that holds it — not as the default way
+to document a repo.
+
+---
 ## Migration recipe (monolithic CLAUDE.md → standard)
 
 1. **Back up** the current `CLAUDE.md` (scratchpad copy; `git init` + commit first

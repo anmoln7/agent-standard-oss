@@ -3,6 +3,26 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [0.9.0] - 2026-07-02
+
+A new section for a problem the standard hadn't addressed: knowledge that
+lives in one person's head, not in any file.
+
+### Added
+
+- **STANDARD.md §11 — Knowledge succession (skill libraries):** when a repo's
+  tacit knowledge (debugging instincts, settled arguments, unwritten
+  discipline) needs to survive a person or run on a cheaper model, generalize
+  it into a skill library instead of leaving it tacit. Discover before you
+  write (read the repo like an incoming engineer, ask only what it can't tell
+  you); one skill per topic with no duplicate homes for a fact; ground-truth
+  only — every command/flag/path verified before it's written, unproven items
+  stay labeled; provenance and re-verification commands for anything that can
+  drift; write-scope discipline (author only inside the skills directory);
+  separate authoring from an independent review pass. Flagged as expensive —
+  reserved for genuinely at-risk knowledge, not the default way to document a
+  repo.
+
 ## [0.8.0] - 2026-07-01
 
 The spec's core sections get their biggest upgrade: a model for what good

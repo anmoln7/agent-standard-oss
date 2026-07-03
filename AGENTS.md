@@ -6,7 +6,7 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
 
 ## Architecture
 
-- `STANDARD.md` — the spec. Ten numbered sections; everything else serves it.
+- `STANDARD.md` — the spec. Eleven numbered sections; everything else serves it.
 - `bin/` — standalone bash scripts, no runtime deps. Each is self-contained except
   `land-safely`, `pr-approve`, and `crew`, which call sibling scripts via their own
   resolved directory (`SELF_DIR`), never via `PATH`. `adopt` (the onboarding wizard)
