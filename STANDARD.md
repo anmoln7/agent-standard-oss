@@ -158,6 +158,26 @@ Capture a category once and it becomes context that prevents it forever. The
 slop list is the institutional memory of how agents fail on *this* codebase —
 and the review lens for §10's contract check.
 
+### Compile, don't retrieve
+
+A fix log only pays off if entries get *read into* `AGENTS.md` and each other,
+not just accumulated as files an agent might grep. Retrieval re-derives an
+answer from raw entries on every session and compounds nothing; compilation
+folds an entry's implication into the standing instructions once, so every
+future session starts from the compiled result instead of re-discovering it.
+Concretely: when a fix-log entry reveals a rule an agent should follow by
+default (not just a past incident to know about), promote that rule into
+`AGENTS.md`'s Gotchas or Conventions section — don't leave it as something
+only found by searching `docs/solutions/`. The entry stays as the record of
+*why*; the rule it produced belongs in the file agents read every session.
+
+**Add entries one at a time.** Write a fix-log entry right after the incident,
+while the cause is fresh, and cross-link it to related entries and to the
+`AGENTS.md` rule it feeds (§3's "Keep in sync" is the place to declare that
+link if it's easy to miss). Do not batch-import a backlog of old incidents in
+one pass — a bulk import produces isolated files with no cross-links and no
+promoted rules, which is a pile, not a compiled fix log.
+
 ---
 
 ## 3. Anti-drift sync contracts
@@ -516,6 +536,13 @@ knowledge needs to survive the person, or needs to run on a cheaper model than
 the one that holds it today, generalize it into a **skill library**
 (`.claude/skills/<name>/SKILL.md` or the harness-equivalent path) instead of
 letting it stay tacit.
+
+A skill library is a compiled artifact in the same sense as §2's "compile,
+don't retrieve": it is the settled output of someone's tacit judgment, written
+once so a reader gets the answer directly instead of re-deriving it from raw
+history, Slack threads, or trial and error. A library that just links out to
+source material without stating the settled rule has not actually succeeded
+the knowledge — it has relocated the retrieval step.
 
 - **Discover before you write.** Read the repo like an incoming engineer
   first — history, docs, tests, CI, the trail of reverted or abandoned
