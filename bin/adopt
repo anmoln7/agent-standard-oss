@@ -42,6 +42,12 @@ ask(){  # ask "plain-English question" → 0 = yes
 changed=()          # files this run touched, for the summary + optional commit
 note(){ changed+=("$1"); }
 
+step_n=0            # wizard progress: counts over the gaps left, not a fixed 1..6
+gaps(){ local g=0 c; for c in c_git c_agents c_claude c_fixlog c_ignore c_sync; do "$c" || g=$((g+1)); done; echo "$g"; }
+# total is recounted live: one fix can close two checks (the skeleton includes
+# the sync section), and the plan shrinks with it so the last step is N of N
+step(){ step_n=$((step_n+1)); echo ""; echo "   ${BOLD}Step ${step_n} of $((step_n + $(gaps) - 1)) — $1${RST}"; }
+
 # work from the project root if we're inside a git repo
 if git rev-parse --show-toplevel >/dev/null 2>&1; then
   cd "$(git rev-parse --show-toplevel)" || exit 1
@@ -173,8 +179,7 @@ fi
 
 # ── step 1: git ──────────────────────────────────────────────────────────────
 if ! c_git; then
-  echo ""
-  echo "   ${BOLD}Step 1 — give your project an undo button${RST}"
+  step "give your project an undo button"
   echo "   git quietly keeps a history of every change, so nothing is ever lost."
   if ask "Turn on git for this folder?"; then
     git init -q && echo "   ✓ done — this folder now keeps its own history."
@@ -183,8 +188,7 @@ fi
 
 # ── step 2: AGENTS.md ────────────────────────────────────────────────────────
 if ! c_agents; then
-  echo ""
-  echo "   ${BOLD}Step 2 — the welcome note (AGENTS.md)${RST}"
+  step "the welcome note (AGENTS.md)"
   echo "   One file that tells every AI assistant what this project is, how to"
   echo "   run it, and the house rules."
   if [ -f CLAUDE.md ] && [ ! -L CLAUDE.md ] && ! head -1 CLAUDE.md | grep -q '^@AGENTS.md'; then
@@ -206,8 +210,7 @@ fi
 
 # ── step 3: CLAUDE.md include ────────────────────────────────────────────────
 if c_agents && ! c_claude; then
-  echo ""
-  echo "   ${BOLD}Step 3 — point Claude at the same note${RST}"
+  step "point Claude at the same note"
   if [ -f CLAUDE.md ]; then
     echo "   ⚠ You have BOTH CLAUDE.md and AGENTS.md with their own content."
     echo "     Merging them needs a human eye (see STANDARD.md §1) — skipping this"
@@ -225,8 +228,7 @@ fi
 
 # ── step 4: the fix log ──────────────────────────────────────────────────────
 if ! c_fixlog; then
-  echo ""
-  echo "   ${BOLD}Step 4 — a diary of solved problems (docs/solutions/)${RST}"
+  step "a diary of solved problems (docs/solutions/)"
   echo "   Every time a tricky bug gets fixed, it gets one small page here — so"
   echo "   no human or AI ever has to solve it twice."
   if ask "Create docs/solutions/ (with one worked example)?"; then
@@ -241,8 +243,7 @@ fi
 
 # ── step 5: keep secrets out ─────────────────────────────────────────────────
 if ! c_ignore; then
-  echo ""
-  echo "   ${BOLD}Step 5 — keep passwords out of the history${RST}"
+  step "keep passwords out of the history"
   echo "   Secret files (like .env) should never be saved into git — once they're"
   echo "   in the history, they're very hard to remove."
   if ask "Add the secret-file rules to .gitignore?"; then
@@ -254,8 +255,7 @@ fi
 
 # ── step 6: keep-in-sync list ────────────────────────────────────────────────
 if c_agents && ! c_sync; then
-  echo ""
-  echo "   ${BOLD}Step 6 — the 'Keep in sync' list${RST}"
+  step "the 'Keep in sync' list"
   echo "   A short list in AGENTS.md naming files that must agree (so when one"
   echo "   changes, the other gets updated too — that's how notes stay honest)."
   if ask "Add a starter 'Keep in sync' section to AGENTS.md?"; then
