@@ -111,7 +111,7 @@ one command runs the wizard *and* fills in your AGENTS.md from the actual codeba
 
 (`/agent-standard:check` shows the read-only scorecard anytime.)
 
-<p align="center"><img src=".github/demo.svg" alt="The adopt wizard: a checkup scorecard, plain-English steps, and a 6/6 finish" width="680"></p>
+<p align="center"><img src=".github/demo.svg" alt="The adopt wizard: a 0/6 checkup scorecard, numbered plain-English steps, and a trophy 6/6 finish" width="680"></p>
 
 Two minutes later your project has its welcome note (`AGENTS.md`), a diary of
 solved problems (`docs/solutions/`), and secret files locked out of history.
