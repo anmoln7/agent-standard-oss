@@ -50,6 +50,27 @@ reference / key files / test layout. This is compliant
 **as long as the two never hold the same content** and a `## Keep in sync` rule
 covers any overlap. The anti-pattern is *duplication*, not *two files*.
 
+### Scoped instruction files (subdirectories)
+
+The root `AGENTS.md` doesn't have to carry everything. Context that belongs to
+one part of the repo can live there, so it loads only when an agent actually
+works there:
+
+- **A subdirectory `AGENTS.md`** for a folder with its own live conventions,
+  constraints, or locked decisions (a package in a monorepo, a deploy dir).
+  Harnesses that read nested instruction files load it on top of the root;
+  open it with "Apply the root AGENTS.md first, then this" so precedence is
+  written down. The one-source rule applies at every level — if the harness
+  wants a folder `CLAUDE.md` too, it's a symlink or include, never a copy.
+- **Path-scoped rules** where the harness supports them (a rules file with a
+  `paths:` glob), so a guardrail loads only when matching files are touched.
+
+Two disciplines keep scoped files from becoming the drift problem they solve:
+a folder file holds only what the root doesn't (zero duplication), and it pins
+*decisions and constraints*, not structure — file trees and stack lists are
+derivable from `ls` and rot fast (§3). A folder of static reference files
+needs no instruction file at all.
+
 ### AGENTS.md skeleton
 
 ```markdown
@@ -78,6 +99,10 @@ Tests, lint, build, whatever the ship gate is.
 
 Keep AGENTS.md scannable. Anything that is a *specific past incident* goes in
 `docs/solutions/`, not inline. That keeps AGENTS.md from growing without bound.
+
+Write hard rules with their exceptions attached: "never commit secrets, except
+`.env.example`" survives contact with edge cases; a bare NEVER gets ignored the
+first time an edge case makes it wrong.
 
 ### What good context covers: the four S's
 
@@ -172,7 +197,10 @@ only found by searching `docs/solutions/`. The entry stays as the record of
 *why*; the rule it produced belongs in the file agents read every session.
 
 **Add entries one at a time.** Write a fix-log entry right after the incident,
-while the cause is fresh, and cross-link it to related entries and to the
+while the cause is fresh. The highest-signal trigger is a human correcting the
+agent on something the instructions should have prevented: log it and promote
+the rule in the same session, not in a later documentation pass. Cross-link
+each entry to related entries and to the
 `AGENTS.md` rule it feeds (§3's "Keep in sync" is the place to declare that
 link if it's easy to miss). Do not batch-import a backlog of old incidents in
 one pass — a bulk import produces isolated files with no cross-links and no
@@ -555,6 +583,24 @@ the knowledge — it has relocated the retrieval step.
   discipline, the hardest live problem as its own guided runbook) rather than
   one sprawling file. Each skill states when *not* to use it and which sibling
   to use instead, so a loader doesn't have to guess.
+- **The description is the routing contract.** A skill's frontmatter
+  description is all a loader sees before deciding to read it. State *what*
+  the skill does, *when* to use it (the trigger phrases someone would actually
+  say), and what distinguishes it from siblings — and never summarize the
+  workflow itself, or the loader follows the summary and skips the body.
+  Debug accordingly: a skill that doesn't fire has a description problem; a
+  skill that fires and produces the wrong output has a body problem.
+- **Lean body, deep references.** Keep the skill file short enough to load
+  cheaply; move rarely-needed detail into reference files linked one level
+  deep (no chains), each with an explicit "read this when …" trigger. Push
+  anything deterministic into a script the skill invokes rather than prose
+  the model re-derives. Don't re-teach what the model already knows — every
+  paragraph must carry knowledge specific to this repo or this person.
+- **Test the trigger, not just the content.** Before calling a skill done,
+  pose the task in the words a user would use, without naming the skill, and
+  check it fires — then pose a neighboring task and check it doesn't. A
+  library whose skills only load when invoked by name has failed at
+  succession: the person who knew which file to open is exactly who's gone.
 - **Ground truth only.** Every command, flag, path, and claim gets verified
   against the repo before it's written down — a wrong runbook is worse than
   no runbook, because it's trusted. Unproven or open items stay explicitly
