@@ -29,7 +29,8 @@ if [ "$json" = 1 ] && [ "$mode" != "check" ]; then
 fi
 
 # pretty output; degrades to plain text when piped
-if [ -t 1 ]; then BOLD=$'\033[1m'; RST=$'\033[0m'; else BOLD=""; RST=""; fi
+if [ -t 1 ]; then BOLD=$'\033[1m'; RST=$'\033[0m'; GRN=$'\033[32m'; DIM=$'\033[2m'
+else BOLD=""; RST=""; GRN=""; DIM=""; fi
 
 ask(){  # ask "plain-English question" → 0 = yes
   if [ "$mode" = "yes" ]; then echo "   → yes (auto)"; return 0; fi
@@ -76,11 +77,11 @@ scorecard_json(){
 
 scorecard(){
   if [ "$json" = 1 ]; then scorecard_json; return; fi
-  local n=0
+  local n=0 miss=""
   echo ""
   echo "   ${BOLD}${repo_name} — checkup${RST}"
   echo "   ──────────────────────────────────────────────────────────"
-  row(){ if "$1"; then echo "   ✅ $2"; n=$((n+1)); else echo "   ⬜ $2"; fi; }
+  row(){ if "$1"; then echo "   ✅ $2"; n=$((n+1)); else echo "   ⬜ $2"; [ -n "$miss" ] || miss="$2"; fi; }
   row c_git    "Saved with git (every change can be undone)"
   row c_agents "AGENTS.md — the one welcome note every AI assistant reads"
   row c_claude "CLAUDE.md points at AGENTS.md (no duplicate copy to drift)"
@@ -89,11 +90,23 @@ scorecard(){
   row c_sync   "A 'Keep in sync' list so related files never disagree"
   local bar="" i=0
   while [ "$i" -lt 6 ]; do
-    if [ "$i" -lt "$n" ]; then bar="${bar}■"; else bar="${bar}□"; fi
+    if [ "$i" -lt "$n" ]; then bar="${bar}${GRN}■${RST}"; else bar="${bar}${DIM}□${RST}"; fi
     i=$((i+1))
   done
   echo "   ──────────────────────────────────────────────────────────"
   echo "   score: $n/6  $bar"
+  case "$n" in
+    6)   echo "   🏆 ${BOLD}a perfect card — this repo takes great care of its agents${RST}" ;;
+    5)   echo "   🔥 so close — one step from a perfect card" ;;
+    3|4) echo "   🚧 halfway there — the shape is showing" ;;
+    1|2) echo "   🐣 just hatched — the foundations are going in" ;;
+    0)   echo "   🌱 untouched soil — every well-kept repo starts here" ;;
+  esac
+  if [ "$mode" = "check" ] && [ -n "$miss" ]; then
+    echo ""
+    echo "   next win → $miss"
+    echo "   (run ${BOLD}adopt${RST} to close the gaps — it asks first, deletes nothing)"
+  fi
   score=$n
 }
 
