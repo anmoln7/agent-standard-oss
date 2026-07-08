@@ -43,9 +43,13 @@ and self-correcting instead.
 agent-standard keeps instruction files **honest** with:
 
 - One source of truth: `AGENTS.md` is canonical; `CLAUDE.md` is a one-line `@AGENTS.md` include (or a symlink)
+- Scoped instruction files: subdirectory `AGENTS.md`s and path-scoped rules for
+  context that belongs to one part of the repo, zero duplication with the root
 - An in-repo fix log: `docs/solutions/`, one past bug or gotcha per file, with frontmatter for search
 - Anti-drift sync contracts: a `## Keep in sync` block naming the file pairs that must agree
 - Self-healing SessionStart hooks that repair silently-failing config before it bites
+- A rationalization table: the recurring excuses used to skip the discipline
+  ("too small to log", "I'll sync it later"), each pre-rebutted in the spec
 
 agent-standard keeps day-to-day work **safe** with:
 
