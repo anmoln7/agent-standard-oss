@@ -128,14 +128,31 @@ HOME="$idir" SHELL=/bin/zsh AGENT_STD_REPO="$ROOT" AGENT_STD_HOME="$idir/.agent-
 [ "$(grep -c 'agent-standard' "$idir/.zshrc")" = "1" ] && ok "re-run doesn't duplicate the PATH line" \
                                                        || no "PATH line duplicated on re-run"
 
-# ── plugin metadata: valid JSON ───────────────────────────────────────────────
+# ── plugin surface: valid JSON, versions in lockstep, commands wired ─────────
 if command -v jq >/dev/null 2>&1; then
   echo "plugin:"
   jq -e .name "$ROOT/.claude-plugin/plugin.json" >/dev/null 2>&1 \
     && jq -e '.plugins[0].name' "$ROOT/.claude-plugin/marketplace.json" >/dev/null 2>&1 \
     && ok "plugin.json and marketplace.json are valid JSON with names" \
     || no "plugin metadata invalid"
+  plug_v="$(jq -r .version "$ROOT/.claude-plugin/plugin.json")"
+  mkt_v="$(jq -r '.plugins[0].version' "$ROOT/.claude-plugin/marketplace.json")"
+  readme_v="$(grep -o 'agent-standard-oss@v[0-9][0-9.]*' "$ROOT/README.md" | head -1 | sed 's/.*@v//')"
+  [ -n "$plug_v" ] && [ "$plug_v" = "$mkt_v" ] && [ "$plug_v" = "$readme_v" ] \
+    && ok "plugin.json, marketplace.json, and README pin the same version ($plug_v)" \
+    || no "version drift: plugin.json=$plug_v marketplace.json=$mkt_v README=$readme_v"
 fi
+
+echo "commands:"
+missing=""
+for f in "$ROOT"/commands/*.md; do
+  # every ${CLAUDE_PLUGIN_ROOT}/bin/<script> a command references must exist
+  for s in $(grep -o 'CLAUDE_PLUGIN_ROOT}/bin/[a-z-]*' "$f" | sed 's|.*/bin/||' | sort -u); do
+    [ -x "$ROOT/bin/$s" ] || missing="$missing $(basename "$f")->bin/$s"
+  done
+done
+[ -z "$missing" ] && ok "command files reference existing bin/ scripts" \
+                  || no "commands reference missing scripts:$missing"
 
 # ── check-config.sh: locks down a loose .env ─────────────────────────────────
 echo "check-config.sh:"

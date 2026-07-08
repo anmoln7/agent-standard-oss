@@ -65,7 +65,7 @@ enforces all three.
 - Add/rename a `bin/` script → update the README "What's in the box" tree and CHANGELOG.
 - Tag a release → bump the `anmoln7/agent-standard-oss@vX.Y.Z` version in the README
   "Enforce it in CI" example AND the `version` in `.claude-plugin/plugin.json` +
-  `.claude-plugin/marketplace.json`.
+  `.claude-plugin/marketplace.json` (a test in `tests/run-tests.sh` pins all three).
 - Workflow `uses:` lines stay pinned to a commit SHA with a `# vN` comment — never a
   bare mutable tag.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).
