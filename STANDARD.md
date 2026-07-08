@@ -576,6 +576,26 @@ materially cheaper model than the one that holds it — not as the default way
 to document a repo.
 
 ---
+
+## Common rationalizations
+
+The standard fails one skipped step at a time, and every skip arrives wearing
+a plausible excuse. These are the recurring ones, each with why it doesn't
+hold. An agent about to act on an excuse from the left column should treat
+that as the signal to stop and follow the section on the right instead.
+
+| Rationalization | Reality |
+|---|---|
+| "I'll add this note to CLAUDE.md too, so it's visible everywhere." | Two copies is the exact failure mode §1 exists to prevent. The second copy starts drifting the moment it lands; put it in `AGENTS.md` once. |
+| "This fix is too small to log." | Size of fix and cost of rediscovery are unrelated — one-line fixes with invisible causes are exactly what the fix log (§2) is for. If it took real digging, log it. |
+| "The fix-log entry exists; anyone can grep for it." | Retrieval isn't compilation (§2). If the entry implies a standing rule, promote the rule into `AGENTS.md` — an entry only found by searching protects nobody by default. |
+| "I'll update the paired file in a follow-up." | The follow-up is the step that never happens; that's why the pair is listed in `## Keep in sync` (§3). The sync is part of this change, not a second task. |
+| "My identity is on the commit, so the agent trailer is redundant." | The author line says *whose* commit it is; the trailer says *how it was made*. Agent involvement must never be invisible (§5), whoever's name is on it. |
+| "Safer to put this on a branch." | Unless it's risky per §6's list (migration, wide refactor, hard to revert, build-breaking), the branch is ceremony that leaves litter behind. Safe-by-default is main. |
+| "Tests are slow and this change is obviously safe." | "Obviously safe" is a self-grade, and the author is not the judge (§10). The ship gate exists precisely for changes that look safe. Run it. |
+| "The output looks right, so it's done." | Looks-right is how slop (§2) ships. Done is what the tests and an independent check say (§10) — verify against the contract, not the vibe. |
+
+---
 ## Migration recipe (monolithic CLAUDE.md → standard)
 
 1. **Back up** the current `CLAUDE.md` (scratchpad copy; `git init` + commit first
