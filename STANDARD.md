@@ -71,6 +71,13 @@ a folder file holds only what the root doesn't (zero duplication), and it pins
 derivable from `ls` and rot fast (§3). A folder of static reference files
 needs no instruction file at all.
 
+For the wider doc set an `AGENTS.md` routes to (runbooks, design docs, system
+notes), make discovery mechanical: open every doc with a dense summary in its
+first few lines, so an agent can `head` across the folder and pick the right
+file instead of loading them all. Note the convention in `AGENTS.md` — both so
+agents rely on it when searching and so they keep the summary true when they
+edit the doc.
+
 ### AGENTS.md skeleton
 
 ```markdown
@@ -195,6 +202,15 @@ default (not just a past incident to know about), promote that rule into
 `AGENTS.md`'s Gotchas or Conventions section — don't leave it as something
 only found by searching `docs/solutions/`. The entry stays as the record of
 *why*; the rule it produced belongs in the file agents read every session.
+
+Prose is the floor of compilation, not the ceiling. When a logged pattern is
+mechanically checkable, promote it past `AGENTS.md` into a linter or pre-commit
+hook — one that **fixes** the problem (`--fix`), or at minimum blocks it, never
+one that only flags it. A rule enforced by a hook cannot be skimmed past, and
+it frees the instruction file's budget for rules that need judgment. The same
+goes for workflows: a multi-step incantation agents keep re-deriving (how to
+kick off a review, how to run one targeted test) gets compiled into a small
+script in the repo's `bin/`, pointed to from `AGENTS.md`.
 
 **Add entries one at a time.** Write a fix-log entry right after the incident,
 while the cause is fresh. The highest-signal trigger is a human correcting the
@@ -455,11 +471,19 @@ are the state, context is scarce, and the user is not a polling target.
   queue drains or a real blocker appears — never poll the user with "shall I
   continue?" prompts. Stop only for permissions, destructive or irreversible
   actions without a plan default, or genuine product choices. Record non-blocking
-  uncertainty in a file and proceed with the plan default.
+  uncertainty in a file and proceed with the plan default. The queue itself must
+  be readable by any agent — a committed `TODOS.md` or a tracker reachable by
+  CLI, never a list that lives only in chat memory.
 - **Quiet is not dead.** Don't declare a long-running job failed from one stale
   signal (a silent log, a missing PID). Reconcile several — process identity,
   status file, output mtime, dirty tree — before discarding work. After a context
   reset, resume from state files, not from chat memory.
+- **Long work leaves a worksheet.** A session that spans hours or could die
+  midway keeps a running trace — goal, plan, what's done, what's next, open
+  questions — as a file **committed with the work**, not scratch notes in /tmp.
+  The bar is the handoff test: a fresh agent handed only the worksheet could
+  finish the job. Committing it alongside the code ties the trace to the
+  history, so "why is it like this?" has an answer months later.
 - **Commit hygiene under parallelism.** With parallel workers in flight, the
   coordinator never runs a bare `git commit -a` — commit with explicit pathspecs
   so one commit can't bundle another worker's work-in-progress. One commit per
@@ -474,12 +498,17 @@ are the state, context is scarce, and the user is not a polling target.
   ends at a *deterministic* boundary (tests green, queue drained, budget hit),
   never because the model says it's finished. Autonomy rarely explodes; it
   quietly drifts, and the usual causes are a stale verifier, a missing stop
-  condition, and an operator who stopped reviewing.
+  condition, and an operator who stopped reviewing. End the shift with the full
+  ship gate — tests, lint, everything — run once more over all the loop
+  touched, so the human returns to a verified tree, not merely a quiet one.
 - **Verifiers decay; audit them.** Verification debt is real: outputs still
   compile while quality slides, until weak work passes review. Recalibrate the
   checker continuously — feed reviewer misses back as regression tests (above),
   refresh review criteria as the codebase changes, and spot-check what the
-  verifier passes.
+  verifier passes. Audit the test suite the same way: periodically hunt
+  *false-confidence tests* — tests that pass without exercising what they
+  claim to (asserting against the mock, an over-broad try/catch, testing the
+  fixture) — and fix them; they are the stalest verifier of all.
 - **Blocked workers escalate, never bypass.** A worker that hits a sandbox,
   permission, or write block reports it and stops. Workarounds — alternate APIs,
   out-of-path writes, git plumbing — are the coordinator's call, made in the open.
@@ -541,7 +570,10 @@ writing, when a human takes over.
   the model that produced the work be the sole judge of whether it met the bar: a
   producer grading itself struggles to notice it went in the wrong direction, and
   self-reported completion is a claim, not a result — "done" is what the compiler,
-  the tests, and an independent checker say. Route the gate through a test, an
+  the tests, and an independent checker say. And "the tests" means the change
+  exercised the way a user actually hits it — run the app, drive the flow end to
+  end — not only the unit tests written alongside the change, which encode the
+  author's own assumptions. Route the gate through a test, an
   independent reviewer, or a different model (§8, §9). Review the *output against
   the contract* — "did it satisfy the contract, and did it add anything beyond
   it?" — not the diff line by line; line-by-line reading is how slop (§2) slips
