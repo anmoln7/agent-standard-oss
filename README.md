@@ -42,32 +42,37 @@ and self-correcting instead.
 
 agent-standard keeps instruction files **honest** with:
 
-- One source of truth: `AGENTS.md` is canonical; `CLAUDE.md` is a one-line `@AGENTS.md` include (or a symlink)
-- Scoped instruction files: subdirectory `AGENTS.md`s and path-scoped rules for
+- One source of truth ([§1](STANDARD.md#1-one-source-of-truth)): `AGENTS.md` is canonical; `CLAUDE.md` is a one-line `@AGENTS.md` include (or a symlink)
+- Scoped instruction files ([§1](STANDARD.md#1-one-source-of-truth)): subdirectory `AGENTS.md`s and path-scoped rules for
   context that belongs to one part of the repo, zero duplication with the root
-- An in-repo fix log: `docs/solutions/`, one past bug or gotcha per file, with frontmatter for search
-- Anti-drift sync contracts: a `## Keep in sync` block naming the file pairs that must agree
-- Self-healing SessionStart hooks that repair silently-failing config before it bites
-- A rationalization table: the recurring excuses used to skip the discipline
+- An in-repo fix log ([§2](STANDARD.md#2-docssolutions-the-fix-log)): `docs/solutions/`, one past bug or gotcha per file,
+  each opening with a small metadata header (frontmatter) so entries are searchable
+- Anti-drift sync contracts ([§3](STANDARD.md#3-anti-drift-sync-contracts)): a `## Keep in sync` block naming the file pairs that must agree
+- Self-healing SessionStart hooks ([§4](STANDARD.md#4-self-healing-sessionstart-hook)): a script that runs when an agent
+  session starts and repairs silently-failing config before it bites
+- A rationalization table ([here](STANDARD.md#common-rationalizations)): the recurring excuses used to skip the discipline
   ("too small to log", "I'll sync it later"), each pre-rebutted in the spec
 
 agent-standard keeps day-to-day work **safe** with:
 
-- Sanctioned commit identities, so no stray author lands in history
-- A default-to-main commit flow, with branch + PR reserved for genuinely risky changes
-- Multi-account deploy hygiene, so a deploy never targets the wrong account
-- A pre-commit secret scan and a full-history secret audit
-- Model-routing policy for multi-model setups (escalate on quality, route by task)
-- Delegation rules for long-running work: files over context, reviews that gate,
-  continue-don't-confirm, and commit hygiene under parallel workers
-- Guardrails and recovery: a failure ladder instead of silence, least-privilege
-  tools, injection discipline, and written escalation criteria
-- Knowledge succession: turning one person's tacit repo knowledge into a
-  ground-truth-verified skill library that outlives them and runs on cheaper models
-- Continuous agent-authorship disclosure, so agent-generated commits and PR
+- Sanctioned commit identities ([§5](STANDARD.md#5-commit-authorship)), so no stray author lands in history — plus
+  continuous agent-authorship disclosure, so agent-generated commits and PR
   activity are never invisible
+- A default-to-main commit flow ([§6](STANDARD.md#6-commit--push-flow-default-to-the-main-branch)), with branch + PR reserved for genuinely risky changes
+- Multi-account deploy hygiene ([§7](STANDARD.md#7-deploy-account-hygiene-multi-account-setups)), so a deploy never targets the wrong account
+- A pre-commit secret scan and a full-history secret audit ([templates](templates/), `bin/secrets-audit`)
+- Model-routing policy for multi-model setups ([§8](STANDARD.md#8-model-routing-multi-model-setups)): route bulk work
+  cheap, escalate on quality, review with the strongest models
+- Delegation rules for long-running work ([§9](STANDARD.md#9-delegation-and-long-running-work)): files over context, reviews that gate,
+  continue-don't-confirm, and commit hygiene under parallel workers
+- Guardrails and recovery ([§10](STANDARD.md#10-guardrails-and-recovery)): a failure ladder instead of silence, each task
+  gets only the tools it needs, fetched content is treated as data and never as
+  instructions (prompt-injection discipline), and escalation criteria are written down
+- Knowledge succession ([§11](STANDARD.md#11-knowledge-succession-skill-libraries)): turning one person's tacit repo knowledge into a
+  ground-truth-verified skill library that outlives them and runs on cheaper models
 
-agent-standard is **cross-harness**. `AGENTS.md` is read by Codex, Cursor, Gemini, and
+agent-standard is **cross-harness** — a *harness* is whichever tool runs your agent
+(Claude Code, Codex, Cursor, Gemini, …). `AGENTS.md` is read by Codex, Cursor, Gemini, and
 Agent Skills; the `@AGENTS.md` include points Claude Code at the same file. No lock-in.
 
 Prefer reading on a website? The standard is rendered at
@@ -191,6 +196,7 @@ bin/                               reusable agent-workflow scripts (bash, no dep
   pr-risk / pr-approve             classify a change routine vs novel; gate merges
   land-safely                      first-pass agent code to a clean reviewed PR
   crew / wt                        run parallel agent tasks; manage git worktrees
+                                   (worktree = a parallel checkout of the same repo)
 tests/
   run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/

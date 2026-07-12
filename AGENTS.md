@@ -69,6 +69,8 @@ enforces all three.
 - Workflow `uses:` lines stay pinned to a commit SHA with a `# vN` comment — never a
   bare mutable tag.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).
+- Add/rename a STANDARD.md section → update the README "About" bullets (both lists
+  link to sections by anchor, so a renamed heading breaks its link).
 - Add a CI gate → mention it in CONTRIBUTING's script rules.
 - Add a fix-log frontmatter field in STANDARD.md §2 → update `templates/docs/solutions/EXAMPLE-*.md`.
 - Add a shell script to a globbed path (`bin/`, `templates/**/*.sh`, etc.) → confirm
