@@ -500,7 +500,12 @@ are the state, context is scarce, and the user is not a polling target.
   questions — as a file **committed with the work**, not scratch notes in /tmp.
   The bar is the handoff test: a fresh agent handed only the worksheet could
   finish the job. Committing it alongside the code ties the trace to the
-  history, so "why is it like this?" has an answer months later.
+  history, so "why is it like this?" has an answer months later. But the
+  worksheet is the *fresh-start* path, and any rewritten summary is lossy —
+  when the same task merely changes harness (a usage limit hit, a second
+  opinion from another vendor), transfer the session transcript itself
+  instead; converters exist, and a raw transcript preserves far more of the
+  session's concrete facts than a hand-written handoff.
 - **Commit hygiene under parallelism.** With parallel workers in flight, the
   coordinator never runs a bare `git commit -a` — commit with explicit pathspecs
   so one commit can't bundle another worker's work-in-progress. One commit per
