@@ -135,6 +135,23 @@ but each layer should exist in writing somewhere an agent can read, because
 this hierarchy is exactly the implicit knowledge senior engineers carry, made
 explicit and machine-readable.
 
+### One name per concept (domain language)
+
+Content drift has a twin: **naming drift** — one concept accruing synonyms
+("issue", "ticket", "task item") until an agent builds around the wrong one.
+Where a repo's domain has terms worth defending, give `AGENTS.md` (or a file
+it points to) a short domain-language block:
+
+- **Canonical term** — one name per concept, one-line definition.
+- **Avoid-list** — the synonyms not to use, named explicitly, so the rule is
+  checkable ("issue tracker; avoid: backlog manager, backlog backend").
+- **Resolved ambiguities** — when a word turns out to mean two things, record
+  the resolution, not just the confusion (§2's compile move, applied to
+  vocabulary).
+
+Keep it to terms that actually get confused. A glossary of the obvious is an
+inventory, and inventories rot (§3).
+
 ---
 
 ## 2. `docs/solutions/`: the fix log
@@ -554,6 +571,9 @@ writing, when a human takes over.
   runs, answer five questions in writing (in `AGENTS.md` or the loop's config):
   1. **What may it touch?** The blast-radius fence — auth, billing, migrations,
      the audit trail trigger a stop; everything outside the fence is fair game.
+     Where the harness supports pre-tool-call hooks, compile the fence into a
+     deny-hook that blocks the dangerous commands outright (a force-push, a
+     hard reset) — enforced beats written (§2).
   2. **How long may it run?** A turn cap *and* a spend cap — an agent without
      them will eventually discover an expensive way to fail.
   3. **What counts as proof?** The exact command and condition that mean "done",
@@ -622,6 +642,13 @@ the knowledge — it has relocated the retrieval step.
   workflow itself, or the loader follows the summary and skips the body.
   Debug accordingly: a skill that doesn't fire has a description problem; a
   skill that fires and produces the wrong output has a body problem.
+- **Invocation is a cost decision.** A model-invocable skill's description
+  sits in the context window every session (context load); a skill invocable
+  only by name costs nothing there, but the human becomes the index that must
+  remember it exists (cognitive load). Choose model-invocation only when the
+  agent — or a sibling skill — must reach it unprompted. When by-name skills
+  multiply past what a person can remember, add one router skill that names
+  the others and says when to reach for each.
 - **Lean body, deep references.** Keep the skill file short enough to load
   cheaply; move rarely-needed detail into reference files linked one level
   deep (no chains), each with an explicit "read this when …" trigger. Push
