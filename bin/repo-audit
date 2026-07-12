@@ -90,6 +90,29 @@ for root in "${ROOTS[@]}"; do
 done
 echo ""
 
+# 6. Twin-dir drift — same-named files in two dirs that must stay identical
+#    (a "Keep in sync" pair, e.g. shared scripts vendored into two repos).
+#    Opt-in: AGENT_STD_TWIN_DIRS="dirA:dirB[,dirC:dirD]" (comma-separated pairs).
+echo "## Twin-dir drift (same-named files that differ between paired dirs)"
+if [ -n "${AGENT_STD_TWIN_DIRS:-}" ]; then
+  IFS="," read -r -a PAIRS <<< "$AGENT_STD_TWIN_DIRS"
+  for pair in ${PAIRS[@]+"${PAIRS[@]}"}; do
+    a="${pair%%:*}"; b="${pair#*:}"
+    if [ ! -d "$a" ] || [ ! -d "$b" ]; then
+      echo "- skipped \`$pair\` (missing dir)"; issues=$((issues+1)); continue
+    fi
+    for f in "$a"/*; do
+      [ -f "$f" ] || continue
+      n="${f##*/}"
+      [ -f "$b/$n" ] || continue
+      cmp -s "$f" "$b/$n" || { echo "- **$n** differs: ${a/$HOME/~} vs ${b/$HOME/~}"; issues=$((issues+1)); }
+    done
+  done
+else
+  echo "- (not configured — set AGENT_STD_TWIN_DIRS to enable)"
+fi
+echo ""
+
 echo "---"
 echo "_Issues flagged: $issues. Run \`secrets-audit --all\` for a deep secret scan._"
 } > "$REPORT" 2>/dev/null

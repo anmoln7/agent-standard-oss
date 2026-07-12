@@ -154,6 +154,34 @@ done
 [ -z "$missing" ] && ok "command files reference existing bin/ scripts" \
                   || no "commands reference missing scripts:$missing"
 
+# ── repo-audit: twin-dir drift check ─────────────────────────────────────────
+echo "repo-audit:"
+mkdir -p "$TMP/twina" "$TMP/twinb" "$TMP/emptyroot"
+printf 'same\n' > "$TMP/twina/shared";  printf 'same\n'  > "$TMP/twinb/shared"
+printf 'one\n'  > "$TMP/twina/drifted"; printf 'two\n'   > "$TMP/twinb/drifted"
+printf 'solo\n' > "$TMP/twina/only-in-a"
+out="$(AGENT_STD_ROOTS="$TMP/emptyroot" AGENT_STD_TWIN_DIRS="$TMP/twina:$TMP/twinb" "$BIN/repo-audit")"
+echo "$out" | grep -q '\*\*drifted\*\* differs' && ok "twin check flags the differing file" \
+                                                || no "drifted file not flagged"
+echo "$out" | grep -q '\*\*shared\*\*'  && no "identical file wrongly flagged" \
+                                        || ok "identical file not flagged"
+echo "$out" | grep -q '\*\*only-in-a\*\*' && no "unpaired file wrongly flagged" \
+                                          || ok "file present in only one dir is ignored"
+out="$(AGENT_STD_ROOTS="$TMP/emptyroot" "$BIN/repo-audit")"
+echo "$out" | grep -q 'not configured' && ok "twin check is opt-in (skips when unset)" \
+                                       || no "unset AGENT_STD_TWIN_DIRS should skip the check"
+
+# ── README → STANDARD.md anchor links resolve ────────────────────────────────
+echo "readme anchors:"
+grep '^##' "$ROOT/STANDARD.md" | sed -e 's/^#\{1,\} //' -e 's/`//g' \
+  | awk '{s=tolower($0); gsub(/[^a-z0-9 -]/,"",s); gsub(/ /,"-",s); print s}' > "$TMP/anchors"
+broken=""
+while IFS= read -r a; do
+  grep -qx "$a" "$TMP/anchors" || broken="$broken $a"
+done < <(grep -o 'STANDARD\.md#[a-z0-9-]*' "$ROOT/README.md" | sed 's/.*#//' | sort -u)
+[ -z "$broken" ] && ok "every README link into STANDARD.md matches a real heading" \
+                 || no "broken README anchors:$broken"
+
 # ── check-config.sh: locks down a loose .env ─────────────────────────────────
 echo "check-config.sh:"
 cd "$TMP" && mkdir -p cfg && cd cfg || exit 1

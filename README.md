@@ -209,7 +209,9 @@ examples/
 ```
 
 Scripts are config-first. `repo-audit` and `secrets-audit` scan `AGENT_STD_ROOTS`
-(colon-separated, default `~/Documents/GitHub:~/Code:~/src`). `crew` launches at
+(colon-separated, default `~/Documents/GitHub:~/Code:~/src`). `repo-audit` can also
+watch "Keep in sync" twins — set `AGENT_STD_TWIN_DIRS="dirA:dirB"` and it flags
+same-named files that differ between the two dirs. `crew` launches at
 most `CREW_MAX_PARALLEL` agents at once (default 4, `0` = unlimited).
 
 ## Enforce it in CI
