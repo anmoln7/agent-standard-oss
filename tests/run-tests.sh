@@ -135,12 +135,13 @@ if command -v jq >/dev/null 2>&1; then
     && jq -e '.plugins[0].name' "$ROOT/.claude-plugin/marketplace.json" >/dev/null 2>&1 \
     && ok "plugin.json and marketplace.json are valid JSON with names" \
     || no "plugin metadata invalid"
-  plug_v="$(jq -r .version "$ROOT/.claude-plugin/plugin.json")"
-  mkt_v="$(jq -r '.plugins[0].version' "$ROOT/.claude-plugin/marketplace.json")"
-  readme_v="$(grep -o 'agent-standard-oss@v[0-9][0-9.]*' "$ROOT/README.md" | head -1 | sed 's/.*@v//')"
-  [ -n "$plug_v" ] && [ "$plug_v" = "$mkt_v" ] && [ "$plug_v" = "$readme_v" ] \
-    && ok "plugin.json, marketplace.json, and README pin the same version ($plug_v)" \
-    || no "version drift: plugin.json=$plug_v marketplace.json=$mkt_v README=$readme_v"
+  # VERSION is the single source; sync-version --check gates the derived files
+  # (plugin.json, marketplace.json, README pin) against it.
+  if "$ROOT/bin/sync-version" --check >/dev/null 2>&1; then
+    ok "plugin.json, marketplace.json, and README pin VERSION ($(tr -d '[:space:]' < "$ROOT/VERSION"))"
+  else
+    no "version drift — run bin/sync-version: $("$ROOT/bin/sync-version" --check 2>&1 | tail -1)"
+  fi
 fi
 
 echo "commands:"

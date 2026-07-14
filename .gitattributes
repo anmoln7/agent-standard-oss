@@ -1,8 +1,6 @@
-# Force LF line endings for shell scripts regardless of platform checkout
+# Force LF line endings for every text file regardless of platform checkout
 # settings. A CRLF checkout breaks bash on the shebang line even when the
-# git index stores LF — see CI's "CRLF regression check".
+# git index stores LF — see CI's "CRLF regression check". A blanket rule means
+# a new script under any path is covered without adding a per-glob pattern.
+* text=auto eol=lf
 *.sh text eol=lf
-install.sh text eol=lf
-bin/* text eol=lf
-tests/*.sh text eol=lf
-templates/**/*.sh text eol=lf

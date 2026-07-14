@@ -1,0 +1,65 @@
+#!/bin/bash
+# sync-version — one version, derived everywhere. The VERSION file at the repo
+# root is the single source of truth; this writes it into the three files that
+# also carry the string so they can't drift by hand-edit:
+#   .claude-plugin/plugin.json, .claude-plugin/marketplace.json, README.md
+#
+#   sync-version           # rewrite the derived files from VERSION
+#   sync-version --check    # exit non-zero if any derived file is out of sync
+#                           # (writes nothing — this is the CI gate)
+set -uo pipefail
+
+SELF_DIR="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$SELF_DIR/.." && pwd)"
+
+VER="$(tr -d '[:space:]' < "$ROOT/VERSION")"
+if ! printf '%s' "$VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+([-.][0-9A-Za-z.-]+)?$'; then
+  echo "sync-version: VERSION is not semver: '$VER'" >&2
+  exit 2
+fi
+
+check=""
+[ "${1:-}" = "--check" ] && check=1
+
+plugin="$ROOT/.claude-plugin/plugin.json"
+mkt="$ROOT/.claude-plugin/marketplace.json"
+readme="$ROOT/README.md"
+
+# The one README occurrence is the CI-example pin: agent-standard-oss@vX.Y.Z
+# JSON files carry "version": "X.Y.Z". Rewrite in place (portable sed -i).
+sed_i() {  # sed_i <expr> <file>  — BSD and GNU compatible
+  sed "$1" "$2" > "$2.tmp" && mv "$2.tmp" "$2"
+}
+
+drift=0
+report() { echo "version drift: $1 has '$2', VERSION has '$VER'" >&2; drift=1; }
+
+# plugin.json
+cur="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$plugin" | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
+if [ -n "$check" ]; then
+  [ "$cur" = "$VER" ] || report "plugin.json" "$cur"
+else
+  sed_i "s/\"version\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"version\": \"$VER\"/" "$plugin"
+fi
+
+# marketplace.json
+cur="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$mkt" | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
+if [ -n "$check" ]; then
+  [ "$cur" = "$VER" ] || report "marketplace.json" "$cur"
+else
+  sed_i "s/\"version\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"version\": \"$VER\"/" "$mkt"
+fi
+
+# README.md CI-example pin
+cur="$(grep -o 'agent-standard-oss@v[0-9][0-9A-Za-z.-]*' "$readme" | head -1 | sed 's/.*@v//')"
+if [ -n "$check" ]; then
+  [ "$cur" = "$VER" ] || report "README.md" "$cur"
+else
+  sed_i "s/agent-standard-oss@v[0-9][0-9A-Za-z.-]*/agent-standard-oss@v$VER/g" "$readme"
+fi
+
+if [ -n "$check" ]; then
+  [ "$drift" -eq 0 ] && echo "sync-version: all derived files match VERSION ($VER)"
+  exit "$drift"
+fi
+echo "sync-version: wrote $VER to plugin.json, marketplace.json, README.md"

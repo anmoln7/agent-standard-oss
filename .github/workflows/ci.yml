@@ -31,6 +31,8 @@ jobs:
             if grep -qU $'\r' "$f"; then echo "CRLF FOUND: $f"; status=1; fi
           done
           exit "$status"
+      - name: version single-source check
+        run: bin/sync-version --check
 
   tests:
     runs-on: ubuntu-latest

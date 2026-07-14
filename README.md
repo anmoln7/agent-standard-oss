@@ -185,7 +185,8 @@ see the automation boundary table above.
 ```
 STANDARD.md                        the spec
 install.sh                         one-line installer (curl | bash, no sudo)
-.gitattributes                     forces LF on shell scripts (Windows/CRLF checkouts)
+.gitattributes                     forces LF on all files (Windows/CRLF checkouts)
+VERSION                            single source of truth for the release version
 .claude-plugin/ + commands/        Claude Code plugin: /agent-standard:adopt, :check
 AGENTS.md                          this repo's own instruction file (dogfooding the standard)
 docs/solutions/                    this repo's own fix log — real past bugs, one per file
@@ -197,6 +198,7 @@ bin/                               reusable agent-workflow scripts (bash, no dep
   land-safely                      first-pass agent code to a clean reviewed PR
   crew / wt                        run parallel agent tasks; manage git worktrees
                                    (worktree = a parallel checkout of the same repo)
+  sync-version                     derive VERSION into the plugin manifests + README pin (maintainer)
 tests/
   run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/

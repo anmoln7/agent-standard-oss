@@ -11,6 +11,10 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   `land-safely`, `pr-approve`, and `crew`, which call sibling scripts via their own
   resolved directory (`SELF_DIR`), never via `PATH`. `adopt` (the onboarding wizard)
   also resolves `../templates` the same way, so `bin/` must stay next to `templates/`.
+  `sync-version` is a maintainer script (not a user-facing command): it derives the
+  version from the root `VERSION` file into the plugin manifests and README pin.
+- `VERSION` — single source of truth for the release version; `bin/sync-version`
+  writes it into the two `.claude-plugin/*.json` files and the README CI-example pin.
 - `templates/` — files users copy into their repos (hooks, gitignore, fix-log example).
 - `examples/AGENTS.md` — a worked example for a fictional repo; keep it in lockstep
   with the skeleton in STANDARD.md.
@@ -24,8 +28,9 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   via `${CLAUDE_PLUGIN_ROOT}/bin/`.
 - `.github/workflows/pages.yml` + `.github/pages.css` — pandoc-built site
   (STANDARD.md + ADOPTERS.md) deployed to anmoln7.github.io/agent-standard-oss.
-- `.gitattributes` — forces LF on shell scripts so a CRLF checkout (e.g. Windows)
-  can't break `bin/`, `install.sh`, or the test suite; CI's CRLF check backs it up.
+- `.gitattributes` — forces LF on every text file (`* text=auto eol=lf`) so a CRLF
+  checkout (e.g. Windows) can't break `bin/`, `install.sh`, or the test suite;
+  CI's CRLF check backs it up.
 
 ## Commands
 
@@ -63,9 +68,10 @@ enforces all three.
 ## Keep in sync
 
 - Add/rename a `bin/` script → update the README "What's in the box" tree and CHANGELOG.
-- Tag a release → bump the `anmoln7/agent-standard-oss@vX.Y.Z` version in the README
-  "Enforce it in CI" example AND the `version` in `.claude-plugin/plugin.json` +
-  `.claude-plugin/marketplace.json` (a test in `tests/run-tests.sh` pins all three).
+- Tag a release → edit the `VERSION` file and run `bin/sync-version`; it derives the
+  version into `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and the
+  README "Enforce it in CI" pin. CI runs `sync-version --check` to catch any hand-edit
+  that drifts from `VERSION`.
 - Workflow `uses:` lines stay pinned to a commit SHA with a `# vN` comment — never a
   bare mutable tag.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).
@@ -73,8 +79,8 @@ enforces all three.
   link to sections by anchor, so a renamed heading breaks its link).
 - Add a CI gate → mention it in CONTRIBUTING's script rules.
 - Add a fix-log frontmatter field in STANDARD.md §2 → update `templates/docs/solutions/EXAMPLE-*.md`.
-- Add a shell script to a globbed path (`bin/`, `templates/**/*.sh`, etc.) → confirm
-  it's covered by `.gitattributes`' `eol=lf` patterns, or add a new pattern.
+- `.gitattributes` forces LF on every text file via a blanket `* text=auto eol=lf`,
+  so a new script under any path is covered automatically — no per-path pattern to add.
 
 ## Commit flow
 
