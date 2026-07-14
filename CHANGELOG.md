@@ -3,6 +3,22 @@
 All notable changes to agent-standard are documented here. Versions follow
 `MAJOR.MINOR.PATCH`.
 
+## [Unreleased]
+
+### Added
+
+- **`VERSION` + `bin/sync-version`:** the release version now lives in one
+  `VERSION` file; `sync-version` derives it into `.claude-plugin/plugin.json`,
+  `.claude-plugin/marketplace.json`, and the README CI-example pin. `sync-version
+  --check` gates drift in CI and the test suite, replacing the old three-way
+  equality assertion — the derived files can no longer be hand-edited out of sync.
+
+### Changed
+
+- **`.gitattributes`:** replaced the per-glob `eol=lf` patterns with a blanket
+  `* text=auto eol=lf`, so a new script under any path is normalized to LF
+  without adding a pattern.
+
 ## [0.10.0] - 2026-07-02
 
 Two practices worth stealing from a much larger project-scaffolding toolkit —
