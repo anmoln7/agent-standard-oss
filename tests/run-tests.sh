@@ -191,6 +191,34 @@ bash "$BIN/../templates/hooks/scripts/check-config.sh" >/dev/null
 perms="$(stat -c '%a' .env.local 2>/dev/null || stat -f '%Lp' .env.local)"
 [ "$perms" = "600" ] && ok ".env.local auto-chmodded to 600" || no ".env.local is $perms, expected 600"
 
+# ── review-gate.sh: blocks commit until a marker exists ──────────────────────
+echo "review-gate.sh:"
+GATE="$BIN/../templates/hooks/scripts/review-gate.sh"
+make_repo "$TMP/gaterepo" >/dev/null
+export CLAUDE_SESSION_ID="test-gate" TMPDIR="$TMP/gatetmp"
+printf '{"tool_input":{"command":"git commit -m x"}}' | bash "$GATE" >/dev/null 2>&1
+[ "$?" -eq 2 ] && ok "commit blocked when no review marker" || no "expected exit 2 with no marker"
+printf '{"tool_input":{"command":"ls"}}' | bash "$GATE" >/dev/null 2>&1
+[ "$?" -eq 0 ] && ok "non-commit command passes through" || no "non-commit should exit 0"
+bash "$GATE" --pass code-reviewed >/dev/null 2>&1
+printf '{"tool_input":{"command":"git commit -m x"}}' | bash "$GATE" >/dev/null 2>&1
+[ "$?" -eq 0 ] && ok "commit allowed after marker written" || no "expected exit 0 after marker"
+unset CLAUDE_SESSION_ID TMPDIR
+
+# ── ratchet.sh: fails only when a metric increases ───────────────────────────
+echo "ratchet.sh:"
+RATCHET="$BIN/../templates/hooks/scripts/ratchet.sh"
+make_repo "$TMP/ratchetrepo" >/dev/null
+awk 'BEGIN{for(i=0;i<600;i++)print "x"}' > big.py
+git add -A && git commit -qm big
+bash "$RATCHET" snapshot >/dev/null 2>&1
+bash "$RATCHET" check >/dev/null 2>&1
+[ "$?" -eq 0 ] && ok "check passes when metrics are unchanged" || no "flat metrics should pass"
+awk 'BEGIN{for(i=0;i<700;i++)print "y"}' > big2.py
+git add -A && git commit -qm big2
+bash "$RATCHET" check >/dev/null 2>&1
+[ "$?" -eq 1 ] && ok "check fails when debt increases" || no "increased debt should fail"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

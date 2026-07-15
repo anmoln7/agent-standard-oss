@@ -239,6 +239,53 @@ link if it's easy to miss). Do not batch-import a backlog of old incidents in
 one pass — a bulk import produces isolated files with no cross-links and no
 promoted rules, which is a pile, not a compiled fix log.
 
+### Gate the commit, don't trust the habit
+
+Promoting a rule into a hook (above) only bites if the hook actually runs before
+the commit lands. The reliable shape is a **review marker**: a review step
+(a `/code-review`, a reviewer agent, a lint pass) writes a marker file *on pass*,
+and a `PreToolUse` hook **blocks `git commit` until the marker exists**. The
+difference from a convention is that the agent cannot skip it — an unreviewed
+commit is refused, not merely frowned upon.
+
+Make the marker **session-scoped** (keyed by repo + agent session id), so
+parallel agent sessions in the same checkout don't clear each other's gate, and
+so the requirement resets per session rather than leaking across unrelated work.
+**Scope the strictness to the diff**: require only a light review for most
+changes, and a deeper one (a data-migration reviewer, a security pass) *only when
+the staged paths match* the sensitive set — a blanket heavy gate on every commit
+gets disabled within a week. Keep a single documented bypass for genuine
+exceptions (an env flag, `--no-verify`); a gate with no escape hatch gets ripped
+out instead of bypassed. `templates/hooks/scripts/review-gate.sh` is a
+copy-in implementation.
+
+### Ratchet debt down; don't gate on an absolute
+
+Some rules can't be enforced as a hard line without failing on day one. "No
+source file over 500 lines" is unachievable in a repo that already has fifty
+such files, so the rule never ships. **Ratchet instead:** snapshot the current
+count of the thing you want less of (files over N lines, `TODO`s, suppressions,
+`any`-casts) into a committed baseline, and fail CI only when a metric *goes up*.
+Existing debt is grandfathered; new debt is blocked; lowering the baseline is a
+deliberate commit, so the number only moves in the good direction — never
+silently. This turns an aspiration a repo can't meet today into a gate it can
+adopt today and tighten over time. `templates/hooks/scripts/ratchet.sh` is a
+language-agnostic implementation; edit its metric list for the repo.
+
+### Record the decision *before* the change, not only the fix after
+
+The fix log (above) captures what broke and why — *after* the fact. Its
+forward-looking twin is a short **decision record** written *before* a
+significant change: what's being decided, why, and the alternatives rejected.
+Keep it lightweight — a few paragraphs in `docs/adr/NNNN-slug.md` — and, exactly
+like the fix log, **bound it with an explicit skip-list** so it doesn't become
+ceremony. Require it for: new features, architectural changes, new external
+integrations, changes spanning many modules, or a new cross-cutting pattern. Do
+**not** require it for: bug fixes, single-file refactors, doc-only changes, or
+test additions. The rule earns its keep precisely because it says loudly when it
+does *not* apply — an unbounded "write an ADR for everything" is the drift, not
+the discipline.
+
 ---
 
 ## 3. Anti-drift sync contracts

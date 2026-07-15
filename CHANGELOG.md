@@ -7,6 +7,16 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **STANDARD.md §2 — three enforcement mechanisms for "compile, don't retrieve":**
+  a **review-marker commit gate** (a `PreToolUse` hook blocks `git commit` until
+  a session-scoped review marker exists, with diff-scoped strictness and a
+  documented bypass), a **debt ratchet** (gate on a metric *not increasing* past
+  a committed baseline instead of an absolute line the repo can't meet today),
+  and a **pre-change decision record** (a bounded ADR with an explicit skip-list,
+  the forward-looking twin of the fix log).
+- **`templates/hooks/scripts/review-gate.sh`** and
+  **`templates/hooks/scripts/ratchet.sh`:** copy-in bash implementations of the
+  two mechanical gates above, each with editable per-repo config and tests.
 - **`VERSION` + `bin/sync-version`:** the release version now lives in one
   `VERSION` file; `sync-version` derives it into `.claude-plugin/plugin.json`,
   `.claude-plugin/marketplace.json`, and the README CI-example pin. `sync-version

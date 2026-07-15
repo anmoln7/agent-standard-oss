@@ -203,7 +203,7 @@ tests/
   run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/
   docs/solutions/EXAMPLE-*.md      two worked fix-log entries with the required frontmatter
-  hooks/                           the SessionStart self-healing hook
+  hooks/                           SessionStart self-healing hook; review-gate + ratchet gates (§2)
   git/                             a pre-commit secret-scan hook and a gitignore starter
 examples/
   AGENTS.md                        a worked AGENTS.md that follows the standard
