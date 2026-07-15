@@ -21,8 +21,8 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ## [0.10.0] - 2026-07-02
 
-Two practices worth stealing from a much larger project-scaffolding toolkit —
-not its methodology (out of scope here), but its hard-won repo hygiene.
+Two repo-hygiene practices: continuous agent-authorship disclosure and a second
+worked fix-log example.
 
 ### Added
 
