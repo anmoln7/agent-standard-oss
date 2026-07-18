@@ -12,6 +12,10 @@ All notable changes to agent-standard are documented here. Versions follow
   constraint; swapping the default when one runs dry is a one-line config
   change), and dial a capable model's reasoning effort down rather than dropping
   to a weaker model — plus avoid recursive max-effort fan-out modes.
+- **`examples/orchestration-workflow.md` — worked quota-routing example:** a
+  private `routing.local.yml` shape (role → model → pool, with reset windows and
+  a reserved premium pool), the one-line `default_vendor` switch for a drained
+  pool, and the `AGENTS.md` rule an agent follows to route against live quota.
 
 - **Maturity level in `adopt --check` (STANDARD.md §1):** the scorecard now
   reports a level (L0 unharnessed → L3 safe) that gates on the *shape* of the
