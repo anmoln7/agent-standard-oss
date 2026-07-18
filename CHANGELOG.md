@@ -7,6 +7,12 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **STANDARD.md §8 — quota and reasoning-effort routing:** route against live
+  quota %, not just per-token cost (subscription pools are the binding
+  constraint; swapping the default when one runs dry is a one-line config
+  change), and dial a capable model's reasoning effort down rather than dropping
+  to a weaker model — plus avoid recursive max-effort fan-out modes.
+
 - **Maturity level in `adopt --check` (STANDARD.md §1):** the scorecard now
   reports a level (L0 unharnessed → L3 safe) that gates on the *shape* of the
   harness, not the raw point count. Secret hygiene is a floor for the top level,

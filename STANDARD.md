@@ -518,6 +518,12 @@ is the policy for using it.
   design) → a high-taste model. Reviews of plans and implementations → the
   strongest models available, ideally including a second model from a different
   vendor as an independent perspective.
+- **Dial reasoning effort, don't drop to a weaker model.** A strong model at a
+  *lower* reasoning setting is often both smarter and cheaper than a smaller model
+  at full effort — a model that isn't capable enough just burns tokens failing.
+  Prefer turning the effort dial down on a capable model over routing to a weaker
+  one. And avoid "max fan-out" modes that spawn sub-agents recursively at top
+  effort: the multiplier, not the per-call price, is what empties a budget.
 - **Cross-vendor via CLI wrapper.** When a harness's subagent/model parameter only
   takes its own vendor's models, reach the other vendor through its CLI: spawn a
   thin wrapper agent whose only job is to write a self-contained prompt, run the
@@ -535,6 +541,15 @@ is the policy for using it.
 - **A second vendor is a peer, not a rubber stamp.** Treat a strong
   different-vendor agent as a peer senior engineer with a different perspective —
   delegate whole problems to it, not just review passes.
+- **Watch quota, not just cost.** On subscription plans the binding constraint
+  isn't per-token price, it's the remaining pool in each vendor's quota — a
+  cheap-per-token model is useless when its subscription is dry. Route against
+  *live quota %*, not a static price list: stack subscriptions across vendors so
+  each has its own pool, keep the premium model's remaining budget for the
+  high-taste work nothing else does as well, and pace usage against each plan's
+  reset window (aggressive where resets are generous, rationed where they aren't).
+  Because routing is config (the private ranking table above), swapping the
+  default when a pool runs out is a one-line change, not a code edit.
 - **High-stakes decisions: consult blind, then synthesize.** Task two strong
   models (ideally different vendors) on the same problem in parallel *without
   showing either the other's answer*, then synthesize the best of both. Blind

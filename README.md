@@ -62,7 +62,8 @@ agent-standard keeps day-to-day work **safe** with:
 - Multi-account deploy hygiene ([§7](STANDARD.md#7-deploy-account-hygiene-multi-account-setups)), so a deploy never targets the wrong account
 - A pre-commit secret scan and a full-history secret audit ([templates](templates/), `bin/secrets-audit`)
 - Model-routing policy for multi-model setups ([§8](STANDARD.md#8-model-routing-multi-model-setups)): route bulk work
-  cheap, escalate on quality, review with the strongest models
+  cheap, escalate on quality, dial reasoning effort over dropping to a weaker
+  model, route against live quota, review with the strongest models
 - Delegation rules for long-running work ([§9](STANDARD.md#9-delegation-and-long-running-work)): files over context, reviews that gate,
   continue-don't-confirm, and commit hygiene under parallel workers
 - Guardrails and recovery ([§10](STANDARD.md#10-guardrails-and-recovery)): a failure ladder instead of silence, each task
