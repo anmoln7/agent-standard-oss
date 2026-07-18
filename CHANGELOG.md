@@ -7,6 +7,18 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **Maturity level in `adopt --check` (STANDARD.md §1):** the scorecard now
+  reports a level (L0 unharnessed → L3 safe) that gates on the *shape* of the
+  harness, not the raw point count. Secret hygiene is a floor for the top level,
+  so a repo passing five checks but leaking `.env` reads as L2, not "almost
+  perfect." `--check` exit 0 now means "reached the top level."
+- **Stable check-ID contract:** each check has a permanent `STD-01`…`STD-06`
+  identifier; `--json` gained `id`, `level`, and `level_name` fields (existing
+  fields unchanged) so CI can gate on the score without misreading new versions.
+- **STANDARD.md §1 — "what the check does not measure":** an explicit ceiling —
+  a deterministic scan confirms a file exists and parses, never that its contents
+  are true; a high score is necessary, not sufficient.
+
 - **STANDARD.md §2 — three enforcement mechanisms for "compile, don't retrieve":**
   a **review-marker commit gate** (a `PreToolUse` hook blocks `git commit` until
   a session-scoped review marker exists, with diff-scoped strictness and a

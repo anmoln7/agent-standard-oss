@@ -152,6 +152,41 @@ it points to) a short domain-language block:
 Keep it to terms that actually get confused. A glossary of the obvious is an
 inventory, and inventories rot (§3).
 
+### Scoring compliance: a maturity level, not a point total
+
+Compliance is checkable (`adopt --check`), and the score is deliberately shaped
+as a **maturity level, not a raw count of passing checks**. A repo with a rich
+`AGENTS.md`, a fix log, and a sync block but **no secret hygiene** is not "almost
+compliant" — it is one clear rung below a repo that also keeps secrets out of
+history, because the missing piece is a *floor*, not one point among many. Levels
+gate on the **shape** of the harness:
+
+- **L0 unharnessed** — no canonical `AGENTS.md`; agents relearn the repo every
+  session.
+- **L1 documented** — a substantive `AGENTS.md` exists.
+- **L2 structured** — L1 plus the single-source include (§1), a fix log (§2), and
+  a written sync block (§3).
+- **L3 safe** — L2 plus version control and secret hygiene (a `.gitignore` that
+  keeps `.env` out of history). The secret floor is what separates the top level.
+
+A point total lets 80% of beautiful docs mask a dangerous gap; a level makes the
+gap the headline. The gate (`--check` exit 0) is reaching the top level, not
+collecting the most points.
+
+**The check IDs are a contract.** Each check has a stable identifier (`STD-01` …
+`STD-06`); an ID never changes meaning, and the `--json` output only gains fields,
+never renames them — so a CI pipeline gating on the score never silently
+misreads a new version.
+
+**What the check does *not* measure.** A deterministic scan can confirm a file
+exists, parses, and matches a pattern — never that its contents are *true*. A
+stale rule scores like a fresh one; an `AGENTS.md` full of wrong commands passes
+the presence check; a fix log of outdated entries still counts as a fix log. A
+high score means the *infrastructure* for reliable agent work is in place — it is
+necessary, not sufficient, and that is the honest ceiling of any automated check.
+Keeping the contents *true* is the §2 "compile, don't retrieve" discipline, which
+no scanner can do for you.
+
 ---
 
 ## 2. `docs/solutions/`: the fix log

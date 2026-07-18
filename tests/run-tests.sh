@@ -96,6 +96,26 @@ mkdir -p "$TMP/freshrepo" && cd "$TMP/freshrepo" || exit 1
 [ -f AGENTS.md ] && grep -q "^# freshrepo" AGENTS.md && ok "starter AGENTS.md created when none exists" \
                                                      || no "starter AGENTS.md missing or unnamed"
 
+# ── adopt: maturity level gates on shape, not point count ────────────────────
+echo "adopt maturity level:"
+# A repo passing every check EXCEPT secret hygiene must NOT reach the top level —
+# the missing .env floor caps it at L2 even at 5/6.
+mkdir -p "$TMP/nosec" && cd "$TMP/nosec" && git init -q >/dev/null 2>&1
+printf '# x\n## Keep in sync\n- a\n' > AGENTS.md
+printf '@AGENTS.md\n' > CLAUDE.md
+mkdir -p docs/solutions
+lvl="$("$BIN/adopt" --check --json 2>/dev/null | sed 's/.*"level":\([0-9]*\).*/\1/')"
+[ "$lvl" = "2" ] && ok "5/6 with no secret hygiene caps at L2 (not the top level)" \
+                 || no "expected L2 without .gitignore .env, got L$lvl"
+"$BIN/adopt" --check >/dev/null 2>&1 && no "--check should fail below the top level" \
+                                     || ok "--check exits nonzero below the top level"
+printf '.env\n' > .gitignore
+lvl="$("$BIN/adopt" --check --json 2>/dev/null | sed 's/.*"level":\([0-9]*\).*/\1/')"
+[ "$lvl" = "3" ] && ok "adding secret hygiene reaches L3" || no "expected L3 after .gitignore, got L$lvl"
+# The JSON contract exposes stable check IDs.
+"$BIN/adopt" --check --json 2>/dev/null | grep -q '"id":"STD-05"' \
+  && ok "--json exposes stable check IDs (STD-05)" || no "STD-05 id missing from --json"
+
 # ── crew: CREW_MAX_PARALLEL caps a batch, remainder stays queued ─────────────
 echo "crew:"
 mkdir -p "$TMP/shim"

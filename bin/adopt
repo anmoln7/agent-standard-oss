@@ -55,28 +55,60 @@ fi
 repo_name="$(basename "$PWD")"
 
 # ── the six checks ───────────────────────────────────────────────────────────
-c_git()    { git rev-parse --git-dir >/dev/null 2>&1; }
-c_agents() { [ -f AGENTS.md ]; }
-c_claude() { [ -L CLAUDE.md ] || { [ -f CLAUDE.md ] && head -1 CLAUDE.md | grep -q '^@AGENTS.md'; }; }
-c_fixlog() { [ -d docs/solutions ]; }
-c_ignore() { [ -f .gitignore ] && grep -qE '^\.env' .gitignore; }
-c_sync()   { [ -f AGENTS.md ] && grep -q '^## Keep in sync' AGENTS.md; }
+# Each check has a STABLE ID (STD-01 … STD-06). IDs are a public contract: an ID
+# never changes meaning, and removing or repurposing one is a breaking change for
+# anyone gating CI on the --json output. See STANDARD.md §1.
+c_git()    { git rev-parse --git-dir >/dev/null 2>&1; }               # STD-01
+c_agents() { [ -f AGENTS.md ]; }                                      # STD-02
+c_claude() { [ -L CLAUDE.md ] || { [ -f CLAUDE.md ] && head -1 CLAUDE.md | grep -q '^@AGENTS.md'; }; }  # STD-03
+c_fixlog() { [ -d docs/solutions ]; }                                 # STD-04
+c_ignore() { [ -f .gitignore ] && grep -qE '^\.env' .gitignore; }     # STD-05
+c_sync()   { [ -f AGENTS.md ] && grep -q '^## Keep in sync' AGENTS.md; }  # STD-06
+
+# Maturity level gates on the SHAPE of the harness, not the raw point total:
+# a repo can't be "almost perfect" while leaking secrets. Secret hygiene (STD-05)
+# is a floor for the top level, not one point among six.
+#   L0 unharnessed  — no AGENTS.md
+#   L1 documented   — AGENTS.md present
+#   L2 structured   — L1 + include (STD-03) + fix log (STD-04) + sync block (STD-06)
+#   L3 safe         — L2 + git (STD-01) + secret hygiene (STD-05)
+level(){
+  c_agents || { echo 0; return; }
+  if c_git && c_claude && c_fixlog && c_ignore && c_sync; then echo 3; return; fi
+  if c_claude && c_fixlog && c_sync; then echo 2; return; fi
+  echo 1
+}
+# One-line reason the NEXT level is blocked (empty at the top level).
+level_gap(){
+  case "$(level)" in
+    0) echo "add an AGENTS.md → reach L1" ;;
+    1) c_claude || { echo "point CLAUDE.md at AGENTS.md → toward L2"; return; }
+       c_fixlog || { echo "add docs/solutions/ → toward L2"; return; }
+       c_sync   && echo "toward L2" || echo "add a 'Keep in sync' block → toward L2" ;;
+    2) c_git    || { echo "save the repo with git → toward L3"; return; }
+       c_ignore && echo "toward L3" || echo "gitignore your .env (secret hygiene) → reach L3" ;;
+    *) echo "" ;;
+  esac
+}
+level_name(){ case "$1" in 0) echo "unharnessed";; 1) echo "documented";; 2) echo "structured";; *) echo "safe";; esac; }
 
 score=0
 scorecard_json(){
-  local n=0 first=1
-  printf '{"repo":"%s","checks":[' "$repo_name"
-  jrow(){ # jrow <fn> <key>
+  local n=0 first=1 lvl; lvl="$(level)"
+  printf '{"repo":"%s","level":%d,"level_name":"%s","checks":[' \
+    "$repo_name" "$lvl" "$(level_name "$lvl")"
+  jrow(){ # jrow <fn> <id> <key>
     [ "$first" = 1 ] || printf ','
     first=0
-    if "$1"; then printf '{"key":"%s","pass":true}' "$2"; n=$((n+1)); else printf '{"key":"%s","pass":false}' "$2"; fi
+    if "$1"; then printf '{"id":"%s","key":"%s","pass":true}' "$2" "$3"; n=$((n+1))
+    else printf '{"id":"%s","key":"%s","pass":false}' "$2" "$3"; fi
   }
-  jrow c_git    git
-  jrow c_agents agents_md
-  jrow c_claude claude_md_include
-  jrow c_fixlog fix_log
-  jrow c_ignore gitignore_env
-  jrow c_sync   keep_in_sync
+  jrow c_git    STD-01 git
+  jrow c_agents STD-02 agents_md
+  jrow c_claude STD-03 claude_md_include
+  jrow c_fixlog STD-04 fix_log
+  jrow c_ignore STD-05 gitignore_env
+  jrow c_sync   STD-06 keep_in_sync
   printf '],"score":%d,"total":6}\n' "$n"
   score=$n
 }
@@ -99,19 +131,24 @@ scorecard(){
     if [ "$i" -lt "$n" ]; then bar="${bar}${GRN}■${RST}"; else bar="${bar}${DIM}□${RST}"; fi
     i=$((i+1))
   done
+  local lvl; lvl="$(level)"
   echo "   ──────────────────────────────────────────────────────────"
-  echo "   score: $n/6  $bar"
-  case "$n" in
-    6)   echo "   🏆 ${BOLD}a perfect card — this repo takes great care of its agents${RST}" ;;
-    5)   echo "   🔥 so close — one step from a perfect card" ;;
-    3|4) echo "   🚧 halfway there — the shape is showing" ;;
-    1|2) echo "   🐣 just hatched — the foundations are going in" ;;
-    0)   echo "   🌱 untouched soil — every well-kept repo starts here" ;;
+  echo "   level: ${BOLD}L${lvl} · $(level_name "$lvl")${RST}   score: $n/6  $bar"
+  # Level (shape) drives the headline, not the raw count — a repo that leaks
+  # secrets is never "almost perfect", however many other checks it passes.
+  case "$lvl" in
+    3) echo "   🏆 ${BOLD}fully harnessed — guides, a fix log, and secret hygiene all in place${RST}" ;;
+    2) echo "   🛡️ structured guidance is in — one floor left: secret hygiene + git for L3" ;;
+    1) echo "   📖 documented — add the include, fix log, and sync block for L2" ;;
+    0) echo "   🌱 untouched soil — an AGENTS.md is the first step (L1)" ;;
   esac
-  if [ "$mode" = "check" ] && [ -n "$miss" ]; then
-    echo ""
-    echo "   next win → $miss"
-    echo "   (run ${BOLD}adopt${RST} to close the gaps — it asks first, deletes nothing)"
+  if [ "$mode" = "check" ]; then
+    local gap; gap="$(level_gap)"
+    if [ -n "$gap" ]; then
+      echo ""
+      echo "   next → $gap"
+      echo "   (run ${BOLD}adopt${RST} to close the gaps — it asks first, deletes nothing)"
+    fi
   fi
   score=$n
 }
@@ -169,7 +206,9 @@ fi
 
 scorecard
 if [ "$mode" = "check" ]; then
-  [ "$score" -eq 6 ] && exit 0 || exit 1
+  # Gate on reaching the top maturity level (L3 = all six checks incl. the
+  # secret-hygiene floor). Equivalent to 6/6 today, but the ladder is the API.
+  [ "$(level)" -eq 3 ] && exit 0 || exit 1
 fi
 if [ "$score" -eq 6 ]; then
   echo ""

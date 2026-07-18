@@ -120,8 +120,11 @@ one command runs the wizard *and* fills in your AGENTS.md from the actual codeba
 
 Two minutes later your project has its welcome note (`AGENTS.md`), a diary of
 solved problems (`docs/solutions/`), and secret files locked out of history.
-Run `~/agent-standard/bin/adopt --check` anytime for the scorecard, or
-`adopt --check --json` for a machine-readable version to pipe into other tooling.
+Run `~/agent-standard/bin/adopt --check` anytime for the scorecard — it reports a
+maturity **level** (L0–L3), where the top level requires the secret-hygiene floor,
+so a repo can't score "almost perfect" while leaking `.env`. `adopt --check --json`
+emits a machine-readable version (with stable `STD-01`…`STD-06` check IDs) to gate
+CI or pipe into other tooling.
 
 ## Quick start
 
