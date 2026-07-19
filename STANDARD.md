@@ -645,6 +645,16 @@ writing, when a human takes over.
   tool/model) → degrade gracefully (partial result, clearly labeled as partial) →
   escalate. An agent that swallows a failure and keeps going converts one bug into
   a chain of them.
+- **Compact the error before feeding it back.** Self-healing on a failed tool call
+  works because the model reads the error and fixes the next call — but re-injecting
+  the *raw* output (full stack trace, multi-screen log, the whole failing response)
+  poisons the context window and buries the one line that matters. Feed the next
+  attempt a **compacted** error: the message plus the decisive line, not the dump
+  (store the full log to a file and link it, per §9). Cap how many raw failures
+  accumulate — after a couple of compacted retries that don't converge, the loop is
+  stuck on this error, so hand it up the ladder (fallback → escalate) instead of
+  letting failures pile into context. The compacted history, not the raw log, is
+  what travels with the escalation.
 - **Retries move pressure; they don't remove failure.** An agent that retries
   aggressively — no backoff, no jitter, no budget — amplifies a hiccup into a
   retry storm. Retry with exponential backoff plus jitter, under a written budget

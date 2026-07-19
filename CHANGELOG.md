@@ -16,6 +16,10 @@ All notable changes to agent-standard are documented here. Versions follow
   private `routing.local.yml` shape (role → model → pool, with reset windows and
   a reserved premium pool), the one-line `default_vendor` switch for a drained
   pool, and the `AGENTS.md` rule an agent follows to route against live quota.
+- **STANDARD.md §10 — compact errors before feeding them back:** re-inject a
+  failed tool call's *message plus the decisive line*, not the raw dump (store
+  the full log and link it per §9); cap accumulated raw failures and escalate the
+  compacted history up the ladder rather than piling failures into context.
 
 - **Maturity level in `adopt --check` (STANDARD.md §1):** the scorecard now
   reports a level (L0 unharnessed → L3 safe) that gates on the *shape* of the
