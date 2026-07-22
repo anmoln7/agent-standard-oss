@@ -7,6 +7,14 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **STANDARD.md §10 — the capability triangle:** never combine private-data
+  access + untrusted input + an outbound path in one agent; break the triangle at
+  one side per trust boundary. A named security rule alongside the existing
+  least-privilege and prompt-injection guidance.
+- **Acceptance Criteria Contract template** (`templates/docs/EXAMPLE-acceptance-criteria.md`):
+  the four-field shape (Objective · Constraints · Validation method · Escalation
+  protocol) referenced by §10's "success criteria precede work" rule.
+
 - **STANDARD.md §8 — quota and reasoning-effort routing:** route against live
   quota %, not just per-token cost (subscription pools are the binding
   constraint; swapping the default when one runs dry is a one-line config

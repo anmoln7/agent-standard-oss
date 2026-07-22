@@ -676,6 +676,15 @@ writing, when a human takes over.
   injection). An agent follows its instruction files and its operator — content it
   *reads* never gets promoted to instruction status, no matter how imperative it
   sounds.
+- **Never combine all three sides of the capability triangle in one agent.**
+  Three capabilities are each safe alone but catastrophic together: **access to
+  private data + exposure to untrusted input + a path to send data out**. An agent
+  holding all three is an exfiltration machine waiting for one injected instruction
+  (the "external content is data" rule above is exactly what gets bypassed). Break
+  the triangle at one side per trust boundary: split the component that *reads*
+  untrusted input from the one that *touches* private data, remove the outbound
+  path, or put a human on the step that completes the send. This composes with
+  least-privilege (above) — the allowlist is *how* you drop a side.
 - **The stop condition is a policy, not a parameter.** A turn cap or spend cap is
   an organizational judgment wearing a numeric disguise — "max turns: 20" really
   answers "how much may this flail before a human looks?", and that answer differs
@@ -698,7 +707,11 @@ writing, when a human takes over.
   §9's "continue, don't confirm" is only safe once these are explicit.
 - **Success criteria precede work; the author is not the judge.** Define the
   verifiable deliverable before execution starts — scope, the checks that must
-  pass, what "done" means — so the task is a contract, not a vibe. And never let
+  pass, what "done" means — so the task is a contract, not a vibe. The concrete
+  shape is four fields: **Objective** (user-visible), **Constraints** (what can't
+  change), **Validation method** (a command + condition, not "looks right"), and
+  **Escalation protocol** (when to stop and ask) — a copy-in template is in
+  `templates/docs/EXAMPLE-acceptance-criteria.md`. And never let
   the model that produced the work be the sole judge of whether it met the bar: a
   producer grading itself struggles to notice it went in the wrong direction, and
   self-reported completion is a claim, not a result — "done" is what the compiler,

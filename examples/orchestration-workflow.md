@@ -13,6 +13,20 @@ the policy, and it outlives any given model generation.
 | fast-worker | a cheap fast model | boilerplate, tests, formatting, simple edits |
 | peer engineer | a second vendor's agent CLI | whole problems that need a different perspective |
 
+### Routing by task type
+
+The same policy, sliced by *what kind of work* rather than by role. The **Route
+to** column is the durable part; the **Example** column is a dated snapshot of one
+person's picks (July 2026) — it *will* go stale, and it is not an endorsement.
+Keep your own real names in private config (§8), not here.
+
+| Task | Route to | Why | Example (dates fast) |
+|------|----------|-----|----------------------|
+| Writing / voice | highest-taste model | strongest sense of voice; finds the narrative in messy notes without flattening your point of view | GPT 5.6 Sol |
+| Data analysis | strongest-reasoning model | deliberate and methodical; learns your schemas and semantic layer; accuracy over speed | Opus 4.8 |
+| Long-running work | best long-horizon model | holds a plan across many turns without losing the thread | Fable |
+| Everyday tasks | cheapest capable model | fast and sharp; the long tail of search / Q&A / synthesis doesn't need the top model | GLM 5.2 |
+
 ## Setup
 
 1. **Main model = orchestrator.** Set your strongest model as the main model with

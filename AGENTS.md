@@ -15,7 +15,8 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   version from the root `VERSION` file into the plugin manifests and README pin.
 - `VERSION` — single source of truth for the release version; `bin/sync-version`
   writes it into the two `.claude-plugin/*.json` files and the README CI-example pin.
-- `templates/` — files users copy into their repos (hooks, gitignore, fix-log example).
+- `templates/` — files users copy into their repos (hooks, gitignore, fix-log
+  example, acceptance-criteria contract).
 - `examples/AGENTS.md` — a worked example for a fictional repo; keep it in lockstep
   with the skeleton in STANDARD.md.
 - `tests/run-tests.sh` — plain-bash tests; no bats, no framework.
