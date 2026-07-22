@@ -1,29 +1,61 @@
-:root { color-scheme: light dark; }
-body {
-  max-width: 46rem; margin: 0 auto; padding: 2rem 1.25rem 4rem;
-  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  color: #1f2328; background: #ffffff;
+:root {
+  color-scheme: light dark;
+  /* one desaturated accent (deep teal), not generic GitHub blue — the "Lila ban" */
+  --accent: #0f766e;
+  --ink: #1c2024;
+  --muted: #5b6570;
+  --line: #e4e7eb;
+  --surface: #f6f7f9;
+  --shadow: 0 1px 2px rgba(28,32,36,.04), 0 8px 24px -12px rgba(28,32,36,.12);
 }
-h1, h2, h3 { line-height: 1.25; }
-h1 { border-bottom: 1px solid #d1d9e0; padding-bottom: .4rem; }
-h2 { margin-top: 2.2rem; }
-a { color: #0969da; }
-code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .88em; }
-code { background: #f0f2f5; padding: .12em .35em; border-radius: 4px; }
-pre { background: #f6f8fa; padding: .9rem 1rem; border-radius: 8px; overflow-x: auto; }
+body {
+  max-width: 46rem; margin: 0 auto; padding: 3rem 1.4rem 6rem;
+  font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink); background: #fff;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+/* hierarchy from weight + color + spacing, not just size */
+h1, h2, h3 { line-height: 1.2; letter-spacing: -0.02em; font-weight: 650; }
+h1 { font-size: 2.1rem; margin-bottom: .3rem; padding-bottom: .5rem; border-bottom: 1px solid var(--line); }
+h2 { font-size: 1.4rem; margin-top: 3rem; }
+h3 { font-size: 1.1rem; margin-top: 2rem; color: var(--muted); }
+p, li { max-width: 65ch; }
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .86em; }
+code { background: var(--surface); padding: .12em .38em; border-radius: 5px; }
+pre {
+  background: var(--surface); padding: 1rem 1.15rem; border-radius: 10px;
+  border: 1px solid var(--line); box-shadow: var(--shadow); overflow-x: auto;
+}
 pre code { background: none; padding: 0; }
-blockquote { margin: 0; padding: .1rem 1rem; border-left: 4px solid #d1d9e0; color: #59636e; }
-table { border-collapse: collapse; }
-th, td { border: 1px solid #d1d9e0; padding: .35rem .7rem; text-align: left; }
-#TOC { background: #f6f8fa; border-radius: 8px; padding: .8rem 1.2rem; }
+blockquote {
+  margin: 1.4rem 0; padding: .5rem 1.1rem; color: var(--muted);
+  border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 8px 8px 0;
+}
+table { border-collapse: collapse; width: 100%; margin: 1.2rem 0; }
+th, td { border: 1px solid var(--line); padding: .5rem .8rem; text-align: left; }
+th { background: var(--surface); font-weight: 600; }
+tr:nth-child(even) td { background: rgba(15,118,110,.02); }
+hr { border: none; border-top: 1px solid var(--line); margin: 3rem 0; }
+#TOC {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 1rem 1.4rem; box-shadow: var(--shadow);
+}
 #TOC ul { margin: .2rem 0; padding-left: 1.1rem; list-style: none; }
-.site-nav { font-size: .95rem; margin-bottom: 1.5rem; }
+#TOC a { color: var(--muted); }
+#TOC a:hover { color: var(--accent); }
+.site-nav { font-size: .95rem; margin-bottom: 2rem; color: var(--muted); }
+.site-nav a { color: var(--muted); }
+.site-nav a:hover { color: var(--accent); }
 @media (prefers-color-scheme: dark) {
-  body { color: #e6edf3; background: #0d1117; }
-  a { color: #58a6ff; }
-  h1 { border-color: #30363d; }
-  code { background: #21262d; }
-  pre, #TOC { background: #161b22; }
-  blockquote { border-color: #30363d; color: #8b949e; }
-  th, td { border-color: #30363d; }
+  :root {
+    --accent: #2dd4bf;      /* brighter teal for dark-mode contrast */
+    --ink: #e6edf3;
+    --muted: #8b949e;
+    --line: #2a2f37;
+    --surface: #161b22;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+  body { background: #0d1117; }        /* off-black, never #000 */
+  tr:nth-child(even) td { background: rgba(45,212,191,.03); }
 }

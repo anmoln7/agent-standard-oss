@@ -7,6 +7,13 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **STANDARD.md §9 — autonomy is bounded by verification, not generation:**
+  a loop earns only as much autonomy as a cheap, unfakeable check can green-light;
+  faster generation deepens the review pile rather than relieving it.
+- **STANDARD.md §9 — comprehension debt:** passing tests aren't understanding;
+  keep fully-unread loops confined to cheap, reversible work and require a human to
+  hold the design for anything expensive to undo (auth, billing, architecture).
+
 - **STANDARD.md §10 — the capability triangle:** never combine private-data
   access + untrusted input + an outbound path in one agent; break the triangle at
   one side per trust boundary. A named security rule alongside the existing

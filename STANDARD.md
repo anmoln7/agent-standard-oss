@@ -612,7 +612,17 @@ are the state, context is scarce, and the user is not a polling target.
   cap concurrency at what the *operator* can actually review, not what the
   machine can run: worktrees solve collisions and checkers solve verification,
   but nothing solves operator overload; review bandwidth is the ceiling.
-- **Unattended loops need breakers.** A loop that runs without a human needs a
+- **Autonomy is bounded by verification, not generation.** Hand a loop only as
+  much autonomy as you can *cheaply and reliably verify* — no further. Generation
+  is wide and near-free; verification is the narrow neck, and it is where the one
+  resource that doesn't scale (human attention) gets spent. So making the agent
+  generate faster doesn't relieve the bottleneck, it deepens the pile in front of
+  it — the problem is never too many changes, it's too many *unverified* ones. The
+  practical dial: a loop earns more autonomy only when a cheap, unfakeable check
+  (a type gate, a property test, a rubric-driven review) can green-light its output
+  without a person. Where no such check exists, the loop stays small and a human
+  stays in it — which is the same "review bandwidth is the ceiling" limit, read as
+  a budget you spend deliberately rather than a wall you hit by accident.
   runtime limit, a consecutive-failure threshold, and a circuit breaker — and it
   ends at a *deterministic* boundary (tests green, queue drained, budget hit),
   never because the model says it's finished. Autonomy rarely explodes; it
@@ -628,6 +638,19 @@ are the state, context is scarce, and the user is not a polling target.
   *false-confidence tests* — tests that pass without exercising what they
   claim to (asserting against the mock, an over-broad try/catch, testing the
   fixture) — and fix them; they are the stalest verifier of all.
+- **Green tests are not comprehension; watch the debt nobody can see.** A loop can
+  ship correct-looking, passing code indefinitely while no human ever reads it —
+  and the bill comes due the first time a subtle bug surfaces in a module nobody
+  understands, where tracing it takes weeks instead of hours because there's no
+  mental model to start from. This is *comprehension debt*, and it's distinct from
+  the verification debt above: the checks genuinely pass, the code genuinely works,
+  yet the team has lost the ability to reason about its own system. Tests-green is
+  a floor, not understanding. Bound the debt deliberately: keep the loops that run
+  fully unread confined to *cheap, reversible, low-blast-radius* work (a nightly
+  lint-fixer, a small dependency bump), and require a human to actually read and
+  hold the design for anything expensive to undo — auth, billing, data model,
+  cross-cutting architecture. The point isn't to read every diff; it's to never
+  let the code a human *must* be able to debug drift into code no human has seen.
 - **Blocked workers escalate, never bypass.** A worker that hits a sandbox,
   permission, or write block reports it and stops. Workarounds — alternate APIs,
   out-of-path writes, git plumbing — are the coordinator's call, made in the open.
