@@ -2,6 +2,9 @@
 *.log
 .gstack/
 
+# local-only launch drafts — not for the public repo
+docs/launch/
+
 # secrets live here — never commit them
 .env
 .env.*
