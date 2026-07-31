@@ -623,6 +623,8 @@ are the state, context is scarce, and the user is not a polling target.
   without a person. Where no such check exists, the loop stays small and a human
   stays in it — which is the same "review bandwidth is the ceiling" limit, read as
   a budget you spend deliberately rather than a wall you hit by accident.
+- **An unattended shift runs inside written bounds.** Before a loop runs with
+  nobody watching, it gets a declared blast radius, a wall-clock or token
   runtime limit, a consecutive-failure threshold, and a circuit breaker — and it
   ends at a *deterministic* boundary (tests green, queue drained, budget hit),
   never because the model says it's finished. Autonomy rarely explodes; it
@@ -630,10 +632,33 @@ are the state, context is scarce, and the user is not a polling target.
   condition, and an operator who stopped reviewing. End the shift with the full
   ship gate — tests, lint, everything — run once more over all the loop
   touched, so the human returns to a verified tree, not merely a quiet one.
+- **An uncalibrated checker is worse than none.** When the verifier is itself a
+  model — a rubric-driven reviewer, an LLM judging output quality — it starts as
+  an *unvalidated* instrument, and shipping behind one buys false confidence
+  rather than safety. Calibrate before trusting it at scale: assemble a small
+  labeled set (50–100 cases is enough) that **includes the failures**, not just
+  the passes — a checker that has only ever seen good work can't demonstrate
+  discernment — then run the checker against it, measure how often it agrees with
+  the human label, and analyze every disagreement. Sharpen the rubric until
+  agreement is high, and re-run the loop; a checker that can't reach it has an
+  ambiguous rubric, which is the real bug. If a rule can't be applied
+  consistently by two humans, a model won't apply it consistently either — and
+  when the humans themselves disagree on a label, stop and settle that before
+  automating anything on top of it. Keep the labeled set in the repo so
+  recalibration is a re-run, not a re-derivation.
+- **One checker, one dimension.** A single reviewer prompt scoring correctness
+  *and* security *and* style is undebuggable — when it fails you can't tell which
+  criterion misfired, and sharpening one dimension silently drags the others.
+  Split into a few narrow checkers that each target one dimension and score it
+  plainly (pass/fail unless a gradient genuinely carries signal). A handful of
+  well-calibrated checkers beats a couple dozen noisy ones, so add a dimension
+  only when a real failure demands it. This is §1's rule about monolithic
+  instruction files, applied to verification.
 - **Verifiers decay; audit them.** Verification debt is real: outputs still
   compile while quality slides, until weak work passes review. Recalibrate the
   checker continuously — feed reviewer misses back as regression tests (above),
-  refresh review criteria as the codebase changes, and spot-check what the
+  re-run the calibration set when failure modes shift (above), refresh review
+  criteria as the codebase changes, and spot-check what the
   verifier passes. Audit the test suite the same way: periodically hunt
   *false-confidence tests* — tests that pass without exercising what they
   claim to (asserting against the mock, an over-broad try/catch, testing the
@@ -746,6 +771,29 @@ writing, when a human takes over.
   the contract* — "did it satisfy the contract, and did it add anything beyond
   it?" — not the diff line by line; line-by-line reading is how slop (§2) slips
   through while the reviewer feels thorough.
+- **Derive the checks from observed failures, not imagined ones.** Criteria
+  invented in a vacuum measure what you *guessed* would break, and pass while the
+  failure users actually hit goes unmeasured — a generic "is this good?" gate
+  scoring well is the classic false green. So before writing the gate, look at
+  the real output: run the thing on a batch of realistic inputs and *read the
+  results* — not the summary, the actual outputs and traces — then group the
+  mistakes you find and write one check per recurring group. Prefer the cheap
+  deterministic check wherever a failure admits one (does it parse, does it
+  compile, does it match the schema, is the required line present); reserve
+  model-judged rubrics for what genuinely needs judgment, and human review for
+  the high-stakes and the tie-breaks. That ordering is also a cost ladder —
+  cheapest filter first, most expensive attention last. Keep the checks tied to
+  failures that keep recurring, and let new failure modes add new checks as they
+  appear; a check nobody can trace to a real defect is upkeep you're paying for
+  nothing.
+- **Change one variable at a time.** When tuning a loop that isn't performing —
+  prompt, model, tool definitions, runtime config — vary exactly one and hold the
+  rest fixed, against an unchanged set of checks. Change two and a wash reads as
+  "no effect" when it was really one win cancelling one regression, and you learn
+  nothing about either. Fix the model and vary the prompt, then fix the prompt
+  and vary the model, then vary the serving config last. The corollary: don't
+  tune the work and its checker in the same pass — a checker edited to accommodate
+  failing output has stopped being a measurement.
 - **Scrutiny scales with novelty.** Agents are strongest where prior art is
   dense and fail *confidently* where it's thin — an agent that visibly struggles
   is the signal you've left remix territory, and its plausible-sounding output
