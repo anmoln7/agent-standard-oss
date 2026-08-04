@@ -152,6 +152,39 @@ it points to) a short domain-language block:
 Keep it to terms that actually get confused. A glossary of the obvious is an
 inventory, and inventories rot (§3).
 
+### Name the current layer when the codebase has strata
+
+Naming drift has a structural twin. A repo maintained by a succession of leads
+accumulates **strata**: each lead built in the idiom they understood, and
+because nobody had enough context to migrate the previous one, the old idiom
+survives underneath. The result is a codebase where two files solve the same
+problem in two shapes, both load-bearing, neither wrong. This is most common
+in small teams on complex domains — permissions, billing, identity — where the
+work is permanently valuable but rarely the quarter's priority, so nothing ever
+forces the layers to compact.
+
+Strata break the instruction "write code consistent with the surrounding code",
+because *surrounding* is ambiguous by construction. An agent that copies the
+nearest pattern picks a layer at random, and a harness that ships all day picks
+a new one every session — which is how the repo gains a stratum per contributor
+instead of per lead.
+
+Where a repo has strata, `AGENTS.md` (or a file it points to) says so plainly:
+
+- **The current layer** — the idiom new code is written in, with one pointer to
+  a file that exemplifies it. "Copy this file's shape" beats a paragraph
+  describing it.
+- **Frozen layers** — older idioms that still run and must keep running. Name
+  them, name where they live, and say the rule: extend in place if you must
+  touch them, never seed new code from them.
+- **Layers being migrated** — the ones with a live destination, and what the
+  destination is. A migration nobody is running is a frozen layer; label it as
+  one rather than aspirationally.
+
+Left unwritten, this knowledge lives only with whoever has been there longest,
+and it decays exactly the way §11 describes — except here the cost isn't a lost
+runbook, it's a repo that gains a layer every time someone new starts shipping.
+
 ### Scoring compliance: a maturity level, not a point total
 
 Compliance is checkable (`adopt --check`), and the score is deliberately shaped
@@ -786,6 +819,42 @@ writing, when a human takes over.
   failures that keep recurring, and let new failure modes add new checks as they
   appear; a check nobody can trace to a real defect is upkeep you're paying for
   nothing.
+- **Where nothing compiles, reconcile against a second source.** Every check
+  above assumes an exit code: a type gate, a failing test, a schema mismatch.
+  Point a harness at analysis instead — an incident trend, a cost breakdown, a
+  usage query pulled through some MCP — and that whole apparatus is gone. There
+  is no compiler for a number, and the failure mode is not an error but a
+  *plausible answer computed over the wrong population*: a query that silently
+  covers half the rows because the filter depends on a field nobody fills in,
+  returning real arithmetic over an unrepresentative slice. It reads as fact,
+  formats beautifully, and is wrong in a direction nobody can see from the
+  output. Reasoning built on top of it inherits the error at full confidence,
+  and a quarter of work can be spent solving a problem that never existed.
+  So for analysis that will be reasoned on top of, the verification is
+  reconciliation: **state the population before stating the finding** — what
+  the query counted, what it excluded, and why — then check that population
+  against an independent source that was never part of the pipeline (the raw
+  channel the alerts fired into, a second system's totals, a hand count of one
+  slice). Reconcile before the conclusion is drawn, not after it's been acted
+  on; a number that survived a cross-check is evidence, and one that hasn't is
+  still a draft. Disagreement between the two sources is the finding — chase it
+  before proceeding, because it is the only signal you get that the pipeline is
+  measuring the wrong thing. Surprise gets the same treatment: an analysis that
+  contradicts what someone close to the domain believed is not automatically
+  the correction, it is the trigger to reconcile.
+- **Play and production are separate activities; don't run them in one pass.**
+  Learning a new harness, model, or tool is genuinely valuable and mostly
+  happens by failing at things — which is exactly why it must not happen inside
+  load-bearing work. Mixed together, the experiment inherits production's stakes
+  and production inherits the experiment's error rate, and the outcome is worse
+  at both: the learning is timid because the blast radius is real, and the
+  shipped work carries failures nobody budgeted for. It also erodes the quality
+  bar, because "it's a new tool, we're still figuring it out" becomes a standing
+  excuse attached to real deliverables. So bound the experiment deliberately —
+  a scratch repo, a throwaway branch, a task nothing depends on, an explicit
+  block of time — and let it fail freely. A technique graduates into production
+  work once it clears the same gates as anything else (§10's checks, §9's
+  reviews), not because it seemed to go well in the experiment.
 - **Change one variable at a time.** When tuning a loop that isn't performing —
   prompt, model, tool definitions, runtime config — vary exactly one and hold the
   rest fixed, against an unchanged set of checks. Change two and a wash reads as
@@ -895,6 +964,9 @@ that as the signal to stop and follow the section on the right instead.
 | "Safer to put this on a branch." | Unless it's risky per §6's list (migration, wide refactor, hard to revert, build-breaking), the branch is ceremony that leaves litter behind. Safe-by-default is main. |
 | "Tests are slow and this change is obviously safe." | "Obviously safe" is a self-grade, and the author is not the judge (§10). The ship gate exists precisely for changes that look safe. Run it. |
 | "The output looks right, so it's done." | Looks-right is how slop (§2) ships. Done is what the tests and an independent check say (§10) — verify against the contract, not the vibe. |
+| "I matched the file next to it, so it's consistent." | In a repo with strata (§1), the nearest file is a random layer, not the current one. Match the layer `AGENTS.md` names as current, and leave frozen layers unseeded. |
+| "The query ran clean, so the numbers are right." | Clean execution proves the query ran, not that it covered the right rows (§10). State the population and reconcile it against a second source before reasoning on the result. |
+| "We're still learning the tool, so a rough result is expected here." | Then it wasn't production work (§10). Learning gets its own bounded space; a real deliverable clears the same gates regardless of how new the tooling is. |
 
 ---
 ## Migration recipe (monolithic CLAUDE.md → standard)
