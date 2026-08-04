@@ -185,6 +185,56 @@ Left unwritten, this knowledge lives only with whoever has been there longest,
 and it decays exactly the way §11 describes — except here the cost isn't a lost
 runbook, it's a repo that gains a layer every time someone new starts shipping.
 
+#### Finding the strata when nobody can name them
+
+The block above assumes someone can enumerate the layers. Often nobody can —
+the person who could is exactly the person who left, which is the condition
+that produced the strata in the first place. So the layers have to be recovered
+from evidence, and the repo carries plenty: **strata are visible as clusters of
+files that solve the same problem in different shapes, and those clusters
+correlate with periods of history.**
+
+The recovery is a §11 discovery pass narrowed to one question — *what idioms
+are live here?* — and it is read-only:
+
+- **Start from divergence, not from history.** Pick a handful of concerns the
+  repo handles repeatedly (how a request is validated, how errors surface, how
+  a module reaches the database, how tests are structured) and collect how each
+  is done across the tree. Concerns with exactly one shape are not strata and
+  cost nothing further. Concerns with two or three competing shapes are the
+  candidates; everything below is about those.
+- **Date the shapes, then read the seam.** For each competing shape, find when
+  its files were introduced and when the shape last got *new* files rather than
+  edits. A shape that stopped acquiring new files at some point and only
+  receives maintenance edits since is a frozen layer. A shape still gaining new
+  files is live. Two shapes both gaining new files is the finding that matters
+  most: the repo is actively growing in two directions, and nobody decided
+  which one wins.
+- **Take conversions as the migration signal.** Where a file moved from one
+  shape to another, the direction of that change is the intended destination,
+  and the count of remaining unconverted files is how far it got. A conversion
+  that happened a few times long ago and stopped is a stalled migration —
+  record it as a frozen layer with a note that a destination was once
+  attempted, not as a migration in flight.
+- **Ask about intent; never infer it.** Evidence establishes what the layers
+  *are* and which are still growing. It cannot establish which one is meant to
+  win — that is a decision, not a fact, and inferring it from file counts or
+  recency is how the wrong layer gets enshrined as canonical. Present the
+  candidates and let a human pick. Where nobody will decide, say so in
+  `AGENTS.md` explicitly ("two live shapes, no ruling") — an honest ambiguity
+  an agent can escalate on beats a confident wrong answer it will build on.
+- **Verify each layer before writing it down.** Every claim about a layer names
+  real files that a reader can open, and the exemplar pointer for the current
+  layer must be a file that actually exhibits the idiom end to end. This is §11's
+  ground-truth rule: a wrong strata map is worse than none, because it is
+  trusted, and it will be copied.
+
+The output is the block above, plus a fix-log entry (§2) recording how the
+strata arose where that is knowable — the entry is the *why*, and the
+`AGENTS.md` block is the compiled rule. Re-run the pass when a migration
+finishes or a new shape starts appearing, not on a schedule; strata change on
+the timescale of leads, not sprints.
+
 ### Scoring compliance: a maturity level, not a point total
 
 Compliance is checkable (`adopt --check`), and the score is deliberately shaped
@@ -965,6 +1015,7 @@ that as the signal to stop and follow the section on the right instead.
 | "Tests are slow and this change is obviously safe." | "Obviously safe" is a self-grade, and the author is not the judge (§10). The ship gate exists precisely for changes that look safe. Run it. |
 | "The output looks right, so it's done." | Looks-right is how slop (§2) ships. Done is what the tests and an independent check say (§10) — verify against the contract, not the vibe. |
 | "I matched the file next to it, so it's consistent." | In a repo with strata (§1), the nearest file is a random layer, not the current one. Match the layer `AGENTS.md` names as current, and leave frozen layers unseeded. |
+| "The newest pattern has the most files, so that's the canonical one." | File counts and recency establish which layers are *live*, never which one is *meant* to win (§1). That's a decision a human makes; inferring it enshrines a layer nobody chose. |
 | "The query ran clean, so the numbers are right." | Clean execution proves the query ran, not that it covered the right rows (§10). State the population and reconcile it against a second source before reasoning on the result. |
 | "We're still learning the tool, so a rough result is expected here." | Then it wasn't production work (§10). Learning gets its own bounded space; a real deliverable clears the same gates regardless of how new the tooling is. |
 
