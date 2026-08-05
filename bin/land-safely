@@ -18,9 +18,15 @@
 #   8. push + open PR via gh                     [auto]
 set -uo pipefail
 
-dry=""; title=""
-for a in "$@"; do [ "$a" = "--dry-run" ] && dry=1 || title="$a"; done
-[ -n "$title" ] || { echo "usage: land-safely [--dry-run] \"PR title\""; exit 1; }
+dry=""; title=""; subject_arg=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --dry-run)    dry=1; shift ;;
+    -m|--subject) subject_arg="${2:-}"; shift 2 ;;
+    *)            title="$1"; shift ;;
+  esac
+done
+[ -n "$title" ] || { echo "usage: land-safely [--dry-run] [-m \"commit subject\"] \"PR title\""; exit 1; }
 git rev-parse --git-dir >/dev/null 2>&1 || { echo "not a git repo"; exit 1; }
 run(){ echo "  \$ $*"; [ -n "$dry" ] || "$@"; }
 # gate: like run, but a nonzero exit ABORTS the pipeline (set -e is not on).
@@ -46,10 +52,20 @@ fi
 # handed a long objective and pass the whole thing here, which produced commits
 # whose subject was a paragraph of prompt text. Keep the first line, cap it, and
 # put any remainder in the body where it belongs.
-# Objectives from the loop are written as "<subject> — <instructions…>", so an
-# em-dash split recovers the intended subject exactly. Fall back to a hard cut
-# for a title that does not follow that shape.
-subject="$(printf '%s' "$title" | head -1 | sed -E 's/ — .*//' | cut -c1-72)"
+# The commit subject and the objective are DIFFERENT things, and conflating them
+# is what produced 500-character commit subjects in three merged repos. An agent
+# handed one positional argument had no compliant move: the same string was both
+# "what to do" and "what to call it".
+#
+#   -m "docs: add AGENTS.md"   → explicit subject, always wins
+#   (omitted)                  → derive one: em-dash clause, else first line
+#
+# Deriving is the fallback, not the contract. Callers should pass -m.
+if [ -n "$subject_arg" ]; then
+  subject="$(printf '%s' "$subject_arg" | head -1 | cut -c1-72)"
+else
+  subject="$(printf '%s' "$title" | head -1 | sed -E 's/ — .*//' | cut -c1-72)"
+fi
 body=""
 [ "${#title}" -gt "${#subject}" ] && body="$(printf '%s' "$title" | cut -c$((${#subject}+1))-)"
 if [ -n "$(git status --porcelain)" ]; then

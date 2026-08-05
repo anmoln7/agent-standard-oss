@@ -56,11 +56,22 @@ case "$cmd" in
       # Write the prompt to a temp file — robust against #, newlines, quotes, etc.
       # (inlining it into the tmux command string truncates at '#' and breaks on newlines.)
       pf="$QDIR/task-$stamp-$i.prompt"
+      # Hand land-safely a SHORT subject separately from the objective. Passing
+      # the whole objective as the single positional argument made it the commit
+      # subject too, so three merged repos carry a 500-character instruction
+      # paragraph as their subject line — and an agent told to "use X as the
+      # subject" while also told to run `land-safely "<objective>"` had no
+      # compliant move. Objectives are written "<subject> — <detail>", so the
+      # first clause is the subject.
+      obj_subject="$(printf '%s' "$obj" | sed -E 's/ — .*//' | cut -c1-72)"
       cat > "$pf" <<PROMPT
 $obj
 
-When the change is complete and tested, run: land-safely "$obj"
-That opens a PR (auto-merges if routine, or leaves it for human review if novel).
+When the change is complete and tested, run:
+  land-safely -m "$obj_subject" "$obj_subject"
+The -m value is the commit subject; keep it short and do not paste the full
+instructions into it. That opens a PR (auto-merges if routine, or leaves it for
+human review if novel).
 Do not push directly; do not edit unrelated files.
 PROMPT
       # Autonomy: headless agents can't get interactive approval, so grant a SCOPED
