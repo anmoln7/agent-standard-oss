@@ -42,14 +42,38 @@ else
 fi
 
 # 2. commit work (the global pre-commit gitleaks hook runs here)
+# The title becomes the commit SUBJECT, so it must be one short line. Agents are
+# handed a long objective and pass the whole thing here, which produced commits
+# whose subject was a paragraph of prompt text. Keep the first line, cap it, and
+# put any remainder in the body where it belongs.
+# Objectives from the loop are written as "<subject> — <instructions…>", so an
+# em-dash split recovers the intended subject exactly. Fall back to a hard cut
+# for a title that does not follow that shape.
+subject="$(printf '%s' "$title" | head -1 | sed -E 's/ — .*//' | cut -c1-72)"
+body=""
+[ "${#title}" -gt "${#subject}" ] && body="$(printf '%s' "$title" | cut -c$((${#subject}+1))-)"
 if [ -n "$(git status --porcelain)" ]; then
   run git add -A
-  run git commit -m "$title"
+  if [ -n "$body" ] && [ -z "$dry" ]; then
+    printf '%s\n\n%s\n' "$subject" "$body" | git commit -q -F -
+    echo "  \$ git commit (subject: $subject)"
+  else
+    run git commit -m "$subject"
+  fi
 else
   echo "  (nothing uncommitted to commit)"
 fi
 
 # 3. rebase onto latest default
+# A repo with no remote cannot fetch, and the rebase then fails for a reason that
+# has nothing to do with conflicts — the old message said "rebase conflict" and
+# sent the reader hunting for one. Detect the real cause and stop early.
+if ! git remote get-url origin >/dev/null 2>&1; then
+  echo "🛑 no 'origin' remote — this repo is local-only, so there is nothing to"
+  echo "   push to and no PR to open. Your work is committed on the branch."
+  echo "   Add a remote (gh repo create --source=.) and re-run to land it."
+  exit 1
+fi
 run git fetch -q origin "$default"
 if [ -z "$dry" ]; then
   if ! git rebase "origin/$default"; then
