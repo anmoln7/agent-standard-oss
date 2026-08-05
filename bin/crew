@@ -71,9 +71,13 @@ PROMPT
       claude_flags="${CREW_CLAUDE_FLAGS:---allowed-tools Edit Write Read Bash Glob Grep}"
       task="task-$stamp-$i"
       if [ "$use_tmux" -eq 1 ]; then
+        # tee to a log as well as the pane: a tmux scrollback dies with the
+        # session, so without this the agent's reasoning — the only record of
+        # WHY a task failed — is unrecoverable minutes later.
+        log="$QDIR/$task.log"
         tmux new-window -t "$SESSION" -n "$task" \
-          "cd $(printf %q "$wtpath") && cat $(printf %q "$pf") | claude -p $claude_flags; echo '--- $task done ---'; exec $SHELL"
-        echo "  ▸ $task  [$(basename "$repo")]  $obj   (tmux window $task, wt: $wtpath)"
+          "cd $(printf %q "$wtpath") && cat $(printf %q "$pf") | claude -p $claude_flags 2>&1 | tee $(printf %q "$log"); echo '--- $task done ---' | tee -a $(printf %q "$log"); exec $SHELL"
+        echo "  ▸ $task  [$(basename "$repo")]  $obj   (tmux window $task, wt: $wtpath, log: $log)"
       else
         log="$QDIR/$task.log"
         ( cd "$wtpath" && claude -p $claude_flags < "$pf" >"$log" 2>&1; echo "--- done ---" >>"$log" ) &

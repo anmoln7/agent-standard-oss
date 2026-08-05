@@ -66,6 +66,11 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Changed
 
+- **`bin/crew`:** tmux-mode runs now tee agent output to
+  `~/.config/agent-standard/crew/task-*.log` as well as the pane. Previously a
+  task's output lived only in a tmux scrollback that dies with the session, so
+  the record of *why* a task failed was unrecoverable minutes later. The
+  non-tmux path already logged; this makes both modes consistent.
 - **`.gitattributes`:** replaced the per-glob `eol=lf` patterns with a blanket
   `* text=auto eol=lf`, so a new script under any path is normalized to LF
   without adding a pattern.
