@@ -1,0 +1,81 @@
+#!/bin/bash
+# gh-check — is `gh`'s active account the one that owns THIS repo?
+#
+#   gh-check              # report; exit 1 on mismatch
+#   gh-check --fix        # switch gh to the owning account, then report
+#   gh-check --list       # every local repo, grouped by owning account
+#
+# The problem it solves: `gh` holds tokens for several accounts but only one is
+# active. Query a private repo owned by an inactive account and GitHub answers
+# "404 / not found" — indistinguishable from a repo that does not exist. That
+# has cost real debugging time: a push fails, the repo looks deleted, and the
+# actual cause is the active account.
+#
+# The owner is read from the repo's own origin remote, so there is no list to
+# keep in sync. A hardcoded mapping is what went stale before — the standard
+# said "exactly two zacaiftw repos" when there were eight.
+set -uo pipefail
+
+mode="check"
+for a in "$@"; do
+  case "$a" in
+    --fix)  mode="fix" ;;
+    --list) mode="list" ;;
+    *) echo "usage: gh-check [--fix|--list]"; exit 1 ;;
+  esac
+done
+
+command -v gh >/dev/null 2>&1 || { echo "gh not found"; exit 1; }
+
+active(){ gh auth status 2>&1 | awk '/Active account: true/{print prev} {if ($0 ~ /Logged in to/) prev=$0}' \
+          | sed -E 's/.*account ([A-Za-z0-9_-]+).*/\1/' | head -1; }
+
+owner_of(){ # repo dir → github owner (empty if no origin / not github)
+  local u; u="$(git -C "$1" remote get-url origin 2>/dev/null)" || return 1
+  [ -n "$u" ] || return 1
+  case "$u" in *github.com*) ;; *) return 1 ;; esac
+  printf '%s' "$u" | sed -E 's#^git@[^:]+:##; s#^https?://[^/]+/##; s#/.*$##'
+}
+
+if [ "$mode" = "list" ]; then
+  echo "── local repos by owning GitHub account ──"
+  root="${AGENT_STD_ROOT:-$HOME/Documents/GitHub}"
+  for d in "$root"/*/; do
+    d="${d%/}"; [ -d "$d/.git" ] || continue
+    o="$(owner_of "$d")" || continue
+    printf '%s\t%s\t%s\n' "$o" "$(basename "$d")" "$(git -C "$d" remote get-url origin | sed -E 's#.*/##; s#\.git$##')"
+  done | sort | awk -F'\t' '
+    $1!=p { printf "\n  %s\n", $1; p=$1 }
+    { if ($2==$3) printf "    %s\n", $2; else printf "    %-28s → %s\n", $2, $3 }'
+  echo
+  echo "active: $(active)"
+  exit 0
+fi
+
+repo="$(git rev-parse --show-toplevel 2>/dev/null)" \
+  || { echo "not in a git repo"; exit 1; }
+own="$(owner_of "$repo")" || { echo "gh-check: no github origin — nothing to check"; exit 0; }
+act="$(active)"
+
+if [ "$own" = "$act" ]; then
+  echo "✓ gh account '$act' owns $(basename "$repo") — good to push"
+  exit 0
+fi
+
+echo "⚠ ACCOUNT MISMATCH"
+echo "   repo owner:     $own"
+echo "   gh active:      $act"
+echo "   Effect: gh/api/push against this repo will 404 as if it does not exist."
+
+if [ "$mode" = "fix" ]; then
+  if gh auth switch --user "$own" >/dev/null 2>&1; then
+    echo "   → switched gh to '$own'."
+    echo "     Remember this is GLOBAL: other terminals now act as '$own' too."
+  else
+    echo "   🛑 no stored token for '$own' — run: gh auth login --user $own"
+    exit 1
+  fi
+else
+  echo "   Fix: gh-check --fix    (or: gh auth switch --user $own)"
+  exit 1
+fi

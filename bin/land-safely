@@ -90,6 +90,16 @@ if ! git remote get-url origin >/dev/null 2>&1; then
   echo "   Add a remote (gh repo create --source=.) and re-run to land it."
   exit 1
 fi
+# Wrong active gh account → every push and gh call 404s as "repository not
+# found", which reads as a missing repo rather than an auth problem. Catch it
+# here, before the work is done, rather than at the push at the end.
+if [ -x "$(dirname "$0")/gh-check" ] && [ -z "$dry" ]; then
+  "$(dirname "$0")/gh-check" >/dev/null 2>&1 || {
+    "$(dirname "$0")/gh-check" 2>&1 | sed 's/^/  /'
+    echo "  🛑 aborting before push — fix the account first (gh-check --fix)."
+    exit 1
+  }
+fi
 run git fetch -q origin "$default"
 if [ -z "$dry" ]; then
   if ! git rebase "origin/$default"; then
