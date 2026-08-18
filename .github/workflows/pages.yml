@@ -21,16 +21,23 @@ jobs:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       - name: install pandoc
         run: sudo apt-get update && sudo apt-get install -y pandoc
+      # The runner's pandoc is whatever apt ships (3.1.x on ubuntu-24.04), which
+      # is older than a typical dev machine's. --no-highlight works on both;
+      # --syntax-highlighting=none is 3.5+ only and fails here. Print the version
+      # so a future flag mismatch is one line up from the error instead of a
+      # local-vs-CI guess.
+      - name: pandoc version
+        run: pandoc --version | head -1
       - name: build the site from the markdown sources
         run: |
           mkdir -p _site
           cp .github/pages.css _site/pages.css
           nav='<p class="site-nav"><a href="index.html">The Standard</a> · <a href="adopters.html">Adopters</a> · <a href="https://github.com/anmoln7/agent-standard-oss">GitHub ↗</a></p>'
           echo "$nav" > /tmp/nav.html
-          pandoc STANDARD.md -s --toc --shift-heading-level-by=0 --syntax-highlighting=none \
+          pandoc STANDARD.md -s --toc --shift-heading-level-by=0 --no-highlight \
             --metadata title="The Agent-Instruction House Standard" \
             -B /tmp/nav.html -c pages.css -o _site/index.html
-          pandoc ADOPTERS.md -s --syntax-highlighting=none \
+          pandoc ADOPTERS.md -s --no-highlight \
             --metadata title="Adopters — agent-standard" \
             -B /tmp/nav.html -c pages.css -o _site/adopters.html
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
