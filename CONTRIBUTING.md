@@ -35,6 +35,10 @@ ask:
 - **Read-only by default.** Audit/report scripts must not mutate a repo. Anything that
   writes (commits, pushes, deletes) states so loudly and is opt-in.
 - `bash -n script` must pass. A `shellcheck` clean bill is appreciated.
+- **A command documented in `AGENTS.md` stays pinned to the CI step that runs it.**
+  `bin/doc-gate-check` compares the two strings and fails the build on drift, so
+  edit both together. Pinning a new pair is one line appended to that script's
+  `PAIRS`; a missing command on either side fails rather than passing.
 
 ## PR workflow
 

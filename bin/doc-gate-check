@@ -1,0 +1,126 @@
+#!/bin/bash
+# doc-gate-check — the commands AGENTS.md documents must match the ones CI runs.
+# STANDARD.md §3: a documented command and the CI step that runs it are a
+# drifting pair. When the two are the same string, pin them to each other so
+# editing one without the other fails loudly instead of silently diverging.
+#
+#   doc-gate-check          # compare each pinned pair; exit non-zero on drift
+#
+# Read-only: writes nothing, mutates nothing.
+#
+# Two kinds of pair, because two kinds of drift:
+#
+#   PAIRS      <label>|<doc regex>|<ci regex>
+#              exact string match, for commands written identically in both.
+#
+#   FILEPAIRS  <label>|<doc regex>|<doc strip>|<ci regex>|<ci strip>
+#              compares the *resolved file set* instead. Use where the two
+#              sides legitimately differ in wording — CI globbing a directory
+#              (`templates/git/hooks/*`) while the doc names the one file that
+#              exists today (`.../pre-commit`). Identical strings would be the
+#              wrong bar; covering the same files is the real requirement, and
+#              the check starts failing the moment a new file lands in the glob
+#              and the doc stops covering it.
+#
+# Either kind fails on an empty match on EITHER side, never passes: an absent
+# gate is exactly the condition this script exists to catch, and comparing ""
+# to "" would report it green.
+set -uo pipefail
+
+# pwd -P: git reports a physical path (/private/var on macOS) while a plain pwd
+# keeps the symlink (/var), so the two would never compare equal below.
+SELF_DIR="$(cd "$(dirname "$0")" && pwd -P)"
+ROOT="$(cd "$SELF_DIR/.." && pwd -P)"
+
+DOC="$ROOT/AGENTS.md"
+CI="$ROOT/.github/workflows/ci.yml"
+
+# ROOT is this script's own repo, not $PWD: the pinned pairs below describe THIS
+# repo's gates. Run from anywhere else and the answer would be about a repo the
+# caller isn't looking at — a plausible "ok" about the wrong tree. Say so and stop.
+CALLER_TOP="$(git rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$CALLER_TOP" ] && [ "$CALLER_TOP" != "$ROOT" ]; then
+  echo "doc-gate-check: checks $ROOT, but you are in $CALLER_TOP"
+  echo "  this is a maintainer script for its own repo; run it from there"
+  exit 2
+fi
+if [ ! -f "$DOC" ] || [ ! -f "$CI" ]; then
+  echo "doc-gate-check: expected $DOC and $CI"
+  exit 2
+fi
+
+PAIRS='shellcheck|^shellcheck -S warning |^ *shellcheck -S warning '
+
+FILEPAIRS='bash -n|^bash -n |s/^bash -n //|^ *for f in bin/\* |s/.*for f in //; s/; do.*//'
+
+status=0
+
+TMPD="$(mktemp -d)"
+trap 'rm -rf "$TMPD"' EXIT
+
+# expand a whitespace-separated glob list into a sorted, newline-separated set
+# of paths that actually exist. Word-splitting here is the point.
+expand_set() {
+  # shellcheck disable=SC2086
+  ls -d $1 2>/dev/null | sort -u
+}
+while IFS='|' read -r label doc_re ci_re; do
+  [ -n "$label" ] || continue
+
+  doc_cmd="$(grep -m1 "$doc_re" "$DOC" | sed 's/^[[:space:]]*//')"
+  ci_cmd="$(grep -m1 "$ci_re" "$CI" | sed 's/^[[:space:]]*//')"
+
+  if [ -z "$doc_cmd" ] || [ -z "$ci_cmd" ]; then
+    echo "doc-gate-check: $label — MISSING"
+    [ -n "$doc_cmd" ] || echo "  no match in AGENTS.md"
+    [ -n "$ci_cmd" ]  || echo "  no match in .github/workflows/ci.yml"
+    status=1
+    continue
+  fi
+
+  if [ "$doc_cmd" = "$ci_cmd" ]; then
+    echo "doc-gate-check: $label — ok"
+  else
+    echo "doc-gate-check: $label — DRIFT"
+    echo "  AGENTS.md: $doc_cmd"
+    echo "  ci.yml:    $ci_cmd"
+    status=1
+  fi
+done <<EOF
+$PAIRS
+EOF
+
+while IFS='|' read -r label doc_re doc_strip ci_re ci_strip; do
+  [ -n "$label" ] || continue
+
+  doc_raw="$(grep -m1 "$doc_re" "$DOC" | sed "$doc_strip")"
+  ci_raw="$(grep -m1 "$ci_re" "$CI" | sed "$ci_strip")"
+
+  if [ -z "$doc_raw" ] || [ -z "$ci_raw" ]; then
+    echo "doc-gate-check: $label — MISSING"
+    [ -n "$doc_raw" ] || echo "  no match in AGENTS.md"
+    [ -n "$ci_raw" ]  || echo "  no match in .github/workflows/ci.yml"
+    status=1
+    continue
+  fi
+
+  doc_files="$(cd "$ROOT" && expand_set "$doc_raw")"
+  ci_files="$(cd "$ROOT" && expand_set "$ci_raw")"
+
+  if [ "$doc_files" = "$ci_files" ]; then
+    echo "doc-gate-check: $label — ok ($(printf '%s\n' "$doc_files" | wc -l | tr -d ' ') files)"
+  else
+    echo "doc-gate-check: $label — COVERAGE GAP"
+    echo "  AGENTS.md: $doc_raw"
+    echo "  ci.yml:    $ci_raw"
+    printf '%s\n' "$ci_files" > "$TMPD/ci"
+    printf '%s\n' "$doc_files" > "$TMPD/doc"
+    comm -13 "$TMPD/doc" "$TMPD/ci" | sed 's/^/  only CI checks: /'
+    comm -23 "$TMPD/doc" "$TMPD/ci" | sed 's/^/  only docs claim: /'
+    status=1
+  fi
+done <<EOF
+$FILEPAIRS
+EOF
+
+exit "$status"

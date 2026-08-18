@@ -203,6 +203,7 @@ bin/                               reusable agent-workflow scripts (bash, no dep
   crew / wt                        run parallel agent tasks; manage git worktrees
                                    (worktree = a parallel checkout of the same repo)
   sync-version                     derive VERSION into the plugin manifests + README pin (maintainer)
+  doc-gate-check                   pin AGENTS.md's documented commands to the CI gates (maintainer)
 tests/
   run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/

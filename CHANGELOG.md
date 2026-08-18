@@ -7,6 +7,81 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **`adopt --check` reports a drifted fix log:** §2 requires `module`, `tags`,
+  `problem_type`, and `date` on every entry, and nothing checked it — STD-04
+  passes on an empty `docs/solutions/` directory, so entries missing the fields
+  scored a silent 6/6. The checkup now names how many entries are missing them.
+  It is a note, not a score change: the STD-* ids are a public contract, and
+  tightening one would move repos that pass today. The shipped `EXAMPLE-*`
+  templates are excluded — they are scaffolding, not the repo's own entries.
+
+### Fixed
+
+- **`adopt` commits now disclose agent authorship:** the wizard's `adopt the
+  agent standard` commit carried no trailer, so a script-written commit was
+  indistinguishable from a hand-written one. It now carries `Assisted-by:`, as
+  STANDARD.md §5 requires of every agent-authored commit — a human author line
+  does not exempt it.
+- **`adopt` names the flag you got wrong:** an unknown option printed only the
+  usage line, so a typo gave no hint which flag was rejected. It now echoes the
+  offending flag and points at `--help`.
+- **`adopt --check` says when a folder isn't a git repo:** outside a repo it
+  scored `$PWD` and rendered a normal 0/6 card, so a mistyped path read as a
+  real result about the repo you meant. The human output now labels it; `--json`
+  is unchanged (the check IDs are a public contract).
+- **`bin/doc-gate-check` refuses to run against another repo:** it resolved its
+  paths from its own location, so running it from a different checkout silently
+  reported on *this* repo — a plausible "ok" about a tree the caller wasn't
+  looking at. It now exits 2 and says where it actually points. Paths resolve
+  with `pwd -P` so the macOS `/var` vs `/private/var` symlink can't defeat the
+  comparison.
+
+### Added
+
+- **STANDARD.md §9 — in a shared tree, touch only what you own:** isolation is
+  the rule, but agents land in one tree constantly and never by decision (a
+  second session, a subagent inheriting `cwd`, the human's own uncommitted
+  work). Work additively; never `git stash` (including the `--autostash` that
+  rides along with `git pull --rebase`), switch branches, add/remove a
+  worktree, or reset. Each silently takes a peer's uncommitted changes, and the
+  peer's only symptom is that its work vanished. Unrecognized files are not
+  stray — leave them.
+- **STANDARD.md §10 — some actions are gated by default, not by policy:** four
+  actions earn a gate in every repo because each is cheap, one-line, and looks
+  routine in a diff while the cost lands permanently somewhere the diff can't
+  show — adding or patching a dependency, publishing or bumping a version,
+  writing outside the repo boundary, and committing real data as example data.
+  §6's *hard to revert* test, moved off code and onto actions.
+- **STANDARD.md §3 — claims that drift alone:** a sync contract catches drift
+  *between* files and cannot catch `AGENTS.md` going stale by itself; a build
+  command that quietly stopped working breaks no pair, so no rule fires. Name
+  the origin for derived facts, pin executable claims to a gate rather than a
+  note, and stop hand-keeping what a script can list.
+- **`bin/doc-gate-check` — documented commands pinned to the CI gates:** the
+  `shellcheck` invocation in `AGENTS.md` and the one in `ci.yml` were
+  byte-identical and uncovered by `Keep in sync`, so either could grow a path
+  the other never learned about. The script compares each pinned pair and fails
+  on drift; a command missing from *either* side fails too, so deleting a gate
+  can't pass as "both sides agree". Pin another pair by appending a line to
+  `PAIRS`.
+- **STANDARD.md §11 — three invocation tiers, cheapest one wins:** referencing a
+  skill and saving one in the repo both cost nothing resident; only auto-firing
+  buys prompt space (~50–280 tokens per skill, on every message). Put each skill
+  in the cheapest tier that meets its activation need and promote deliberately —
+  what used to be a single install decision is now two independent ones.
+- **STANDARD.md §11 — the auto-fire budget is a budget:** assume well under a
+  hundred reliably-firing skills per agent as a working ceiling, because input
+  length degrades reasoning before the nominal context limit and each added
+  description dilutes the rest. Count them; know what each buys.
+- **STANDARD.md §11 — don't bid for attention in the description:** a missed
+  match is silent, so the tempting fix is padding the one-liner with shouted
+  trigger conditions. It wins for one skill and taxes every message. The honest
+  fixes are a sharper trigger, a narrower scope, or demotion behind a router.
+- **STANDARD.md §2 — generate the alternatives before the choice:** "alternatives
+  rejected" is the one decision-record field satisfiable after the fact, and
+  strawman rivals read identical to real deliberation. Each alternative now names
+  a condition under which it would have won, and the record is written while the
+  design is still open.
 - **STANDARD.md §9 — autonomy is bounded by verification, not generation:**
   a loop earns only as much autonomy as a cheap, unfakeable check can green-light;
   faster generation deepens the review pile rather than relieving it.

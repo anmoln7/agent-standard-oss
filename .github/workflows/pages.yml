@@ -27,10 +27,10 @@ jobs:
           cp .github/pages.css _site/pages.css
           nav='<p class="site-nav"><a href="index.html">The Standard</a> · <a href="adopters.html">Adopters</a> · <a href="https://github.com/anmoln7/agent-standard-oss">GitHub ↗</a></p>'
           echo "$nav" > /tmp/nav.html
-          pandoc STANDARD.md -s --toc --shift-heading-level-by=0 \
+          pandoc STANDARD.md -s --toc --shift-heading-level-by=0 --syntax-highlighting=none \
             --metadata title="The Agent-Instruction House Standard" \
             -B /tmp/nav.html -c pages.css -o _site/index.html
-          pandoc ADOPTERS.md -s \
+          pandoc ADOPTERS.md -s --syntax-highlighting=none \
             --metadata title="Adopters — agent-standard" \
             -B /tmp/nav.html -c pages.css -o _site/adopters.html
       - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3

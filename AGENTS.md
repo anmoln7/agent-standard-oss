@@ -11,8 +11,10 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   `land-safely`, `pr-approve`, and `crew`, which call sibling scripts via their own
   resolved directory (`SELF_DIR`), never via `PATH`. `adopt` (the onboarding wizard)
   also resolves `../templates` the same way, so `bin/` must stay next to `templates/`.
-  `sync-version` is a maintainer script (not a user-facing command): it derives the
-  version from the root `VERSION` file into the plugin manifests and README pin.
+  `sync-version` and `doc-gate-check` are maintainer scripts (not user-facing
+  commands): the first derives the version from the root `VERSION` file into the
+  plugin manifests and README pin; the second pins the commands documented below
+  to the CI steps that run them.
 - `VERSION` — single source of truth for the release version; `bin/sync-version`
   writes it into the two `.claude-plugin/*.json` files and the README CI-example pin.
 - `templates/` — files users copy into their repos (hooks, gitignore, fix-log
@@ -37,7 +39,7 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
 
 ```bash
 tests/run-tests.sh                    # the test suite (isolated HOME + temp repos)
-bash -n bin/* install.sh              # syntax check
+bash -n bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
 shellcheck -S warning bin/* install.sh tests/*.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit
 ```
 
@@ -79,6 +81,10 @@ enforces all three.
 - Add/rename a STANDARD.md section → update the README "About" bullets (both lists
   link to sections by anchor, so a renamed heading breaks its link).
 - Add a CI gate → mention it in CONTRIBUTING's script rules.
+- Change the `shellcheck` path list in `## Commands` above → update the identical
+  invocation in `.github/workflows/ci.yml`. `bin/doc-gate-check` enforces this in
+  CI, so the pair cannot drift silently; add a new doc/CI command pair by
+  appending a line to that script's `PAIRS`.
 - Add a fix-log frontmatter field in STANDARD.md §2 → update `templates/docs/solutions/EXAMPLE-*.md`.
 - `.gitattributes` forces LF on every text file via a blanket `* text=auto eol=lf`,
   so a new script under any path is covered automatically — no per-path pattern to add.

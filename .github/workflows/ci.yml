@@ -33,6 +33,8 @@ jobs:
           exit "$status"
       - name: version single-source check
         run: bin/sync-version --check
+      - name: documented commands match the CI gates
+        run: bin/doc-gate-check
 
   tests:
     runs-on: ubuntu-latest

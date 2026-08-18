@@ -404,6 +404,21 @@ test additions. The rule earns its keep precisely because it says loudly when it
 does *not* apply — an unbounded "write an ADR for everything" is the drift, not
 the discipline.
 
+**The alternatives are generated before the choice, not after it.** "Alternatives
+rejected" is the one field a record can satisfy dishonestly: having built the
+thing, write down two options nobody weighed and mark them rejected. It reads
+identical to real deliberation and carries none of it. The tell is that the
+rejected options are always strawmen — no one lists a rival they might have
+picked. This failure is near-universal for agents, which answer an architectural
+question with one confident design and implement it; the search never happened,
+so the record documents a preference with formatting. Make the field carry
+weight: each alternative names a condition under which it would have *won*
+("if we needed X, this one"), and the record is written at the point the design
+is still open. An alternative with no winning condition wasn't in the running,
+and listing it is decoration. This is §10's "the author is not the judge" moved
+one step earlier — a producer who never generated a rival cannot have chosen
+between them.
+
 ---
 
 ## 3. Anti-drift sync contracts
@@ -422,6 +437,35 @@ List only the pairs that actually drift in this repo. The rule exists because
 prose inventories rot: a hand-kept "Inventory (legacy)" file-list drifts from the
 codebase until it is removed. Prefer "read the directory" over a hand-kept
 list; where a list is unavoidable, pin it with a sync rule or a test.
+
+### The other half: claims that drift alone
+
+A sync contract catches drift *between* files. It cannot catch `AGENTS.md`
+going stale by itself — a build command that quietly stopped working breaks no
+pair, so no rule fires, and the file keeps asserting it with full authority.
+Since §1 makes `AGENTS.md` the file every agent reads on every task, an
+unverifiable claim there is the most expensive stale instruction in the repo.
+So give the executable claims a way to be re-checked, the same way §11 asks of
+skills:
+
+- **Name the origin for derived facts.** Where a section is a cache of
+  something the repo already states — stack, versions, entry points — put the
+  source in the heading (`## Tech stack (source of truth: package.json)`) and
+  cite the field on the individual claim where it isn't obvious. Re-verifying
+  becomes a `grep` instead of an investigation, and a reader who hits a
+  contradiction knows immediately which side is authoritative.
+- **Prefer a check over a promise.** Anywhere the claim is executable, the
+  strongest version is a gate, not a note — CI running the documented command
+  is what keeps it true, and *enforced beats written* (§2) applies here as
+  everywhere else. A documented command and the CI step that runs it are
+  themselves a drifting pair, so pin them to each other: when the two are the
+  same string, a three-line CI check that compares them costs nothing and
+  fails loudly the first time someone edits one.
+- **Don't hand-keep what a script can list.** An enumeration in prose — every
+  file holding a version string, every surface to update — is the "Inventory
+  (legacy)" failure in miniature, and it drifts the first time someone adds a
+  surface. Either pin it with a sync rule, or replace it with the command that
+  derives it.
 
 ---
 
@@ -601,6 +645,21 @@ is the policy for using it.
   design) → a high-taste model. Reviews of plans and implementations → the
   strongest models available, ideally including a second model from a different
   vendor as an independent perspective.
+- **Escalation runs both ways.** The standing permission to escalate (above) is
+  not a reason to hold the top model everywhere. Route by the *character of the
+  step*, not the importance of the task around it. Schema-bound steps — picking a
+  tool, filling its arguments, extracting a structured field, updating workflow
+  state — reward strict adherence to a contract, not depth of reasoning, and a
+  smaller model often holds a schema more tightly while a larger one pads its
+  answer or invents a parameter. Two things then work against you at once: in a
+  loop that runs a step dozens of times, per-call verbosity compounds into real
+  context and spend, and reasoning tokens spent deciding *which* tool to call buy
+  nothing when the tool was already obvious. Keep the strong model where an error
+  propagates — the initial decomposition, the final synthesis, anything whose
+  output every later step depends on — and let the mechanical middle run small.
+  Where the routing is genuinely unclear, prefer the smarter model per the
+  tie-break order; this bullet narrows *where* that question gets asked, it does
+  not reverse the answer.
 - **Dial reasoning effort, don't drop to a weaker model.** A strong model at a
   *lower* reasoning setting is often both smarter and cheaper than a smaller model
   at full effort — a model that isn't capable enough just burns tokens failing.
@@ -695,6 +754,24 @@ are the state, context is scarce, and the user is not a polling target.
   cap concurrency at what the *operator* can actually review, not what the
   machine can run: worktrees solve collisions and checkers solve verification,
   but nothing solves operator overload; review bandwidth is the ceiling.
+- **In a shared tree, touch only what you own.** Isolation is the rule above;
+  this is what to do when it didn't hold — a second session opened in the same
+  directory, a subagent that inherited `cwd`, or simply the human's own
+  uncommitted work. Treat the working tree as *on loan*: your edits are yours,
+  and everything else in it belongs to someone still using it. So work
+  **additively** — edit your files, stage them by path, commit them, and leave
+  the rest of the tree as you found it; a dirty tree is the normal resting
+  state of a shared checkout, not a problem to clear before starting. An agent
+  therefore never runs, unless asked for it right now: `git stash` in any form
+  (including the `--autostash` that rides along with `git pull --rebase`, which
+  is how it usually arrives), a branch switch, a `git worktree` add/remove, or
+  any reset that discards work. Each of these silently takes a peer's
+  *uncommitted* changes, and the peer's only symptom is that its edits vanished
+  — so it rewrites them, racing a stash entry nobody will pop. When the tree
+  holds files you don't recognize, **leave them and keep going**: unrecognized
+  is not the same as stray, and tidying up is the most common way an agent
+  destroys work it was never asked to touch. A shared tree that genuinely
+  blocks you is an escalation, not a cleanup job.
 - **Autonomy is bounded by verification, not generation.** Hand a loop only as
   much autonomy as you can *cheaply and reliably verify* — no further. Generation
   is wide and near-free; verification is the narrow neck, and it is where the one
@@ -836,6 +913,25 @@ writing, when a human takes over.
      ("two consecutive failures", "wants a new dependency") — not a vibe.
 
   §9's "continue, don't confirm" is only safe once these are explicit.
+- **Some actions are gated by default, not by policy.** Question 5 above asks
+  the operator to name what pulls a human in — but a handful of actions earn a
+  gate in *every* repo, and they are the ones least likely to get named while
+  authoring a policy, because each is cheap, one-line, and looks routine in a
+  diff. What they share is that the cost lands somewhere the diff cannot show,
+  and lands permanently. Unless the repo has granted standing permission, an
+  agent proposes and stops rather than acting, for: **adding, upgrading,
+  patching, or vendoring a dependency** (a one-line manifest edit that buys a
+  transitive tree, a licence, and a supply-chain surface, and gets harder to
+  remove with every import); **publishing, releasing, or bumping a version**
+  (irreversible the moment the artifact leaves the machine — nothing downstream
+  un-sees it); **writing outside the repo boundary** (a sibling checkout has its
+  own history, reviewers, and CI, and possibly its own agent mid-edit; none of
+  this repo's gates apply there); and **committing real data as example data**
+  (a live key, a real identifier, a production URL — a secret in git history
+  survives the commit that removes it, so the fixture must be obviously fake,
+  not merely anonymized). This is §6's **hard to revert** test moved off code
+  and onto actions: same question, asked of a thing that leaves no diff to
+  revert.
 - **Success criteria precede work; the author is not the judge.** Define the
   verifiable deliverable before execution starts — scope, the checks that must
   pass, what "done" means — so the task is a contract, not a vibe. The concrete
@@ -957,13 +1053,41 @@ the knowledge — it has relocated the retrieval step.
   workflow itself, or the loader follows the summary and skips the body.
   Debug accordingly: a skill that doesn't fire has a description problem; a
   skill that fires and produces the wrong output has a body problem.
-- **Invocation is a cost decision.** A model-invocable skill's description
-  sits in the context window every session (context load); a skill invocable
-  only by name costs nothing there, but the human becomes the index that must
-  remember it exists (cognitive load). Choose model-invocation only when the
-  agent — or a sibling skill — must reach it unprompted. When by-name skills
-  multiply past what a person can remember, add one router skill that names
-  the others and says when to reach for each.
+- **Invocation is a cost decision — put each skill in the cheapest tier that
+  meets its activation need.** Three tiers, and only the last one costs prompt
+  space:
+
+  | Tier | How it fires | Resident cost |
+  | --- | --- | --- |
+  | **Referenced** — read at the point of use, nothing stored | you name the path | none |
+  | **Saved** — checked into the repo, invoked by name | you name the skill | none |
+  | **Auto-firing** — description is loaded every session | unprompted, on a description match | ~50–280 tokens per skill, **on every message** |
+
+  A skill only needs the top tier if the agent must reach it *without being
+  asked*. Everything else — content, and keeping a copy — costs nothing
+  resident. Default to the lowest tier that works and promote deliberately;
+  nothing should reach the top tier by accident. Note the second cost of the
+  bottom tiers: the human becomes the index that must remember the skill
+  exists. When by-name skills multiply past what a person can remember, add
+  one router skill that names the others and says when to reach for each —
+  that router, not the whole library, is what earns auto-firing.
+- **The auto-fire budget is small, and it is a budget.** Assume well under a
+  hundred reliably-firing skills per agent, and treat that as a working ceiling
+  rather than a measured one. The cap is not "however many descriptions fit in
+  the window": input length alone degrades a model's reasoning well before the
+  nominal context limit, a description at the top of the context competes with
+  every turn, file read, and tool result that lands after it, and each added
+  description dilutes the rest. So an auto-firing skill is not free even when
+  there is room for it — count them, and know what each one is buying.
+- **Don't bid for attention in the description.** A missed match is *silent* —
+  nobody is told the skill was there and didn't fire — so the tempting fix is
+  to pad the one-liner with shouted trigger and skip conditions until it wins.
+  It works for one skill and costs everyone: a padded description runs an
+  order of magnitude more tokens than a quiet one, paid on every message, and
+  the extra imperatives compete with the repo's actual instructions. Keep the
+  description to what the skill does and when to reach for it. If it still
+  doesn't fire, the honest fixes are a sharper trigger phrase, a narrower
+  scope, or demoting it to by-name invocation behind a router — never volume.
 - **Lean body, deep references.** Keep the skill file short enough to load
   cheaply; move rarely-needed detail into reference files linked one level
   deep (no chains), each with an explicit "read this when …" trigger. Push
@@ -1018,6 +1142,10 @@ that as the signal to stop and follow the section on the right instead.
 | "The newest pattern has the most files, so that's the canonical one." | File counts and recency establish which layers are *live*, never which one is *meant* to win (§1). That's a decision a human makes; inferring it enshrines a layer nobody chose. |
 | "The query ran clean, so the numbers are right." | Clean execution proves the query ran, not that it covered the right rows (§10). State the population and reconcile it against a second source before reasoning on the result. |
 | "We're still learning the tool, so a rough result is expected here." | Then it wasn't production work (§10). Learning gets its own bounded space; a real deliverable clears the same gates regardless of how new the tooling is. |
+| "The tree was dirty, so I stashed it first to get a clean start." | A dirty tree is the resting state of a shared checkout, not a problem to clear (§9). `git stash` takes every modified file, including a peer's and the human's, and the victim's only symptom is that its work vanished. Work additively or escalate. |
+| "These files aren't mine, so I tidied them up." | Unrecognized is not stray (§9). Cleaning up the tree is the most common way an agent destroys work nobody asked it to touch. Leave them and keep going. |
+| "It's one line in package.json." | Size is not the test; reversibility is (§10, §6). A dependency buys a transitive tree, a licence, and a supply-chain surface, and gets harder to remove with every import. Propose and stop. |
+| "The command is documented in AGENTS.md, so it's covered." | Documented is not enforced (§3). A command that quietly stopped working breaks no pair, so no sync rule fires and the file keeps asserting it. Pin the executable claim to a gate. |
 
 ---
 ## Migration recipe (monolithic CLAUDE.md → standard)

@@ -239,6 +239,128 @@ git add -A && git commit -qm big2
 bash "$RATCHET" check >/dev/null 2>&1
 [ "$?" -eq 1 ] && ok "check fails when debt increases" || no "increased debt should fail"
 
+# ── adopt: error messages name the problem, not just the usage ───────────────
+echo "adopt errors:"
+"$BIN/adopt" --chek 2>&1 | grep -q "unknown option '--chek'" \
+  && ok "an unknown flag is echoed back by name" \
+  || no "unknown flag should be named in the error"
+
+# outside a git repo adopt scores \$PWD on purpose; it must SAY so, or a
+# mistyped path reads as a real 0/6 report on the repo the user meant
+mkdir -p "$TMP/notgit" && (cd "$TMP/notgit" && "$BIN/adopt" --check 2>&1) \
+  | grep -q "not inside a git repo" \
+  && ok "a non-git folder is labelled, not scored silently" \
+  || no "non-git checkup should say it is not a git repo"
+
+(cd "$ROOT" && "$BIN/adopt" --check 2>&1) | grep -q "not inside a git repo" \
+  && no "the non-git note must not appear inside a real repo" \
+  || ok "a real repo shows no non-git note"
+
+# the note goes to humans only — --json is a public contract (STD-01..06)
+mkdir -p "$TMP/notgit2" && (cd "$TMP/notgit2" && "$BIN/adopt" --check --json 2>/dev/null) \
+  | head -1 | grep -q '^{"repo"' \
+  && ok "--json stays pure JSON outside a git repo" \
+  || no "--json must not be polluted by the non-git note"
+
+# a fix log whose entries lack the §2 fields is one nobody can query — say so,
+# but never move the score: the STD-* ids are a public contract
+mkdir -p "$TMP/thinlog" && cd "$TMP/thinlog" && git init -q >/dev/null 2>&1
+printf '# x\n## Keep in sync\n- a\n' > AGENTS.md
+printf '@AGENTS.md\n' > CLAUDE.md
+printf '.env\n' > .gitignore
+mkdir -p docs/solutions
+printf -- '---\ntags: [a]\ndate: 2026-01-01\n---\n\n## Problem\nx\n' > docs/solutions/drifted.md
+"$BIN/adopt" --check 2>&1 | grep -q 'missing required frontmatter' \
+  && ok "a fix-log entry missing §2 fields is reported" \
+  || no "drifted fix-log frontmatter should be reported"
+[ "$("$BIN/adopt" --check --json 2>/dev/null | sed 's/.*"score":\([0-9]*\).*/\1/')" = "6" ] \
+  && ok "a drifted fix log still scores 6/6 (score is not moved)" \
+  || no "the frontmatter note must not change the score"
+
+# the shipped templates are scaffolding, not the repo's own entries
+printf -- '---\nmodule: m\ntags: [a]\nproblem_type: bug\ndate: 2026-01-01\n---\n' > docs/solutions/drifted.md
+cp "$ROOT"/templates/docs/solutions/EXAMPLE-*.md docs/solutions/ 2>/dev/null
+"$BIN/adopt" --check 2>&1 | grep -q 'missing required frontmatter' \
+  && no "EXAMPLE-* templates must not count as drifted entries" \
+  || ok "shipped EXAMPLE-* templates don't trigger the frontmatter note"
+
+# §5: agent involvement is never invisible, even under a human author line
+make_repo "$TMP/adoptcommit" >/dev/null
+"$BIN/adopt" --yes >/dev/null 2>&1
+git log -1 --format='%B' 2>/dev/null | grep -qi '^Assisted-by:' \
+  && ok "adopt's commit carries an agent-authorship trailer" \
+  || no "adopt commit must disclose agent authorship (STANDARD.md §5)"
+
+# "deletes nothing" is the promise adopt makes on screen; hold it to that
+git log -1 --shortstat 2>/dev/null | grep -q 'deletion' \
+  && no "adopt must not delete lines when adopting an existing repo" \
+  || ok "adopt only adds when adopting a repo that already has files"
+
+# ── doc-gate-check: AGENTS.md commands stay pinned to the CI gates ───────────
+echo "doc-gate-check:"
+GATE_SRC="$BIN/doc-gate-check"
+(cd "$ROOT" && "$GATE_SRC") >/dev/null 2>&1 \
+  && ok "this repo's documented commands match its CI gates" \
+  || no "doc/CI drift: $( (cd "$ROOT" && "$GATE_SRC") 2>&1 | tail -2 | tr '\n' ' ')"
+
+# a fixture repo lets us prove the failure paths, not just the happy one
+gate_fixture() {   # $1 = dir; copies the real repo's doc + workflow
+  rm -rf "$1"; mkdir -p "$1/bin" "$1/.github/workflows"
+  cp "$GATE_SRC" "$1/bin/"
+  cp "$ROOT/AGENTS.md" "$1/AGENTS.md"
+  cp "$ROOT/.github/workflows/ci.yml" "$1/.github/workflows/ci.yml"
+  # its own git root, so the script's "am I in my own repo?" guard is satisfied
+  git -C "$1" init -q 2>/dev/null
+}
+
+gate_fixture "$TMP/gate-drift"
+# CI grows a path that AGENTS.md never learns about
+sed 's|^\( *\)shellcheck -S warning \(bin/\*.*\)$|\1shellcheck -S warning \2 scripts/new/*.sh|' \
+  "$TMP/gate-drift/.github/workflows/ci.yml" > "$TMP/gate-drift/.github/workflows/ci.new" \
+  && mv "$TMP/gate-drift/.github/workflows/ci.new" "$TMP/gate-drift/.github/workflows/ci.yml"
+(cd "$TMP/gate-drift" && bin/doc-gate-check) >/dev/null 2>&1
+[ "$?" -eq 1 ] && ok "drift between AGENTS.md and ci.yml fails" || no "drift should fail"
+
+gate_fixture "$TMP/gate-absent"
+# both sides lose the command: an absent gate must fail, never compare "" = ""
+printf '# no commands here\n' > "$TMP/gate-absent/AGENTS.md"
+printf 'jobs: {}\n' > "$TMP/gate-absent/.github/workflows/ci.yml"
+(cd "$TMP/gate-absent" && bin/doc-gate-check) >/dev/null 2>&1
+[ "$?" -eq 1 ] && ok "a missing gate on both sides fails (no empty-match pass)" \
+  || no "both-empty should fail, not pass"
+
+# the file-set pair compares resolved paths, not strings: CI globs a directory
+# where the doc names one file, so only real coverage differences may fail
+gate_files_fixture() {   # $1 = dir; a fixture with the real globbable trees
+  rm -rf "$1"; mkdir -p "$1/.github/workflows"
+  cp -R "$ROOT/bin" "$ROOT/tests" "$ROOT/templates" "$ROOT/install.sh" "$1/"
+  cp "$ROOT/AGENTS.md" "$1/AGENTS.md"
+  cp "$ROOT/.github/workflows/ci.yml" "$1/.github/workflows/ci.yml"
+  git -C "$1" init -q 2>/dev/null
+}
+
+gate_files_fixture "$TMP/gate-narrow"
+# the doc quietly stops claiming a directory CI still checks
+sed 's|^bash -n .*|bash -n bin/* install.sh templates/hooks/scripts/*.sh templates/git/hooks/pre-commit|' \
+  "$TMP/gate-narrow/AGENTS.md" > "$TMP/gate-narrow/A" && mv "$TMP/gate-narrow/A" "$TMP/gate-narrow/AGENTS.md"
+(cd "$TMP/gate-narrow" && bin/doc-gate-check) >/dev/null 2>&1
+[ "$?" -eq 1 ] && ok "a doc that covers fewer files than CI fails" \
+  || no "narrowed doc coverage should fail"
+
+# run from another repo it must refuse, not silently report on its own tree:
+# a plausible "ok" about a repo the caller isn't looking at is the worst answer
+make_repo "$TMP/foreign" >/dev/null
+"$BIN/doc-gate-check" >/dev/null 2>&1
+[ "$?" -eq 2 ] && ok "doc-gate-check refuses to run against a foreign repo" \
+  || no "running outside its own repo must exit 2, not report ok"
+
+gate_files_fixture "$TMP/gate-widen"
+# a new hook lands in CI's glob; the doc names only pre-commit and misses it
+printf '#!/bin/bash\necho hi\n' > "$TMP/gate-widen/templates/git/hooks/pre-push"
+(cd "$TMP/gate-widen" && bin/doc-gate-check) >/dev/null 2>&1
+[ "$?" -eq 1 ] && ok "a new file inside CI's glob that the doc misses fails" \
+  || no "widened CI glob should fail"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

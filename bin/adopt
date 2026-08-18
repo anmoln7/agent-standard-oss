@@ -21,7 +21,10 @@ for a in "$@"; do
     --yes)   mode=yes ;;
     --json)  json=1 ;;
     -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "usage: adopt [--check [--json]|--yes]"; exit 1 ;;
+    *) echo "adopt: unknown option '$a'"
+       echo "usage: adopt [--check [--json]|--yes]"
+       echo "try:   adopt --help"
+       exit 1 ;;
   esac
 done
 if [ "$json" = 1 ] && [ "$mode" != "check" ]; then
@@ -62,6 +65,26 @@ c_git()    { git rev-parse --git-dir >/dev/null 2>&1; }               # STD-01
 c_agents() { [ -f AGENTS.md ]; }                                      # STD-02
 c_claude() { [ -L CLAUDE.md ] || { [ -f CLAUDE.md ] && head -1 CLAUDE.md | grep -q '^@AGENTS.md'; }; }  # STD-03
 c_fixlog() { [ -d docs/solutions ]; }                                 # STD-04
+
+# Count fix-log entries missing a §2-required field. Advisory only — never
+# feeds the score. EXAMPLE-* are the shipped templates, not the repo's own
+# entries, so they don't count as drift.
+fixlog_thin(){
+  [ -d docs/solutions ] || return 0
+  local f n=0 base
+  for f in docs/solutions/*.md; do
+    [ -f "$f" ] || continue
+    base="$(basename "$f")"
+    case "$base" in EXAMPLE-*) continue ;; esac
+    if ! grep -q '^module:' "$f" || ! grep -q '^problem_type:' "$f" \
+    || ! grep -q '^tags:' "$f"   || ! grep -q '^date:' "$f"; then
+      n=$((n+1))
+    fi
+  done
+  [ "$n" -eq 0 ] && return 0
+  if [ "$n" = 1 ]; then echo "1 fix-log entry is missing required frontmatter"
+  else echo "$n fix-log entries are missing required frontmatter"; fi
+}
 c_ignore() { [ -f .gitignore ] && grep -qE '^\.env' .gitignore; }     # STD-05
 c_sync()   { [ -f AGENTS.md ] && grep -q '^## Keep in sync' AGENTS.md; }  # STD-06
 
@@ -118,6 +141,12 @@ scorecard(){
   local n=0 miss=""
   echo ""
   echo "   ${BOLD}${repo_name} — checkup${RST}"
+  # Outside a git repo we score $PWD as-is (deliberate: a folder can still be
+  # checked). Say so, or a mistyped path reads as a real 0/6 report on the repo
+  # the user meant — a plausible answer about the wrong directory.
+  if ! c_git; then
+    echo "   ${DIM}note: $PWD is not inside a git repo — scoring this folder${RST}"
+  fi
   echo "   ──────────────────────────────────────────────────────────"
   row(){ if "$1"; then echo "   ✅ $2"; n=$((n+1)); else echo "   ⬜ $2"; [ -n "$miss" ] || miss="$2"; fi; }
   row c_git    "Saved with git (every change can be undone)"
@@ -143,6 +172,15 @@ scorecard(){
     0) echo "   🌱 untouched soil — an AGENTS.md is the first step (L1)" ;;
   esac
   if [ "$mode" = "check" ]; then
+    # STD-04 scores the fix log's existence, deliberately: tightening it would
+    # move repos that score 6/6 today, and the check IDs are a public contract.
+    # A drifted entry is still worth saying out loud — an entry missing the §2
+    # fields is one nobody can filter or query, which is the point of the log.
+    local thin; thin="$(fixlog_thin)"
+    if [ -n "$thin" ]; then
+      echo ""
+      echo "   ${DIM}note: $thin — see STANDARD.md §2 for the required fields${RST}"
+    fi
     local gap; gap="$(level_gap)"
     if [ -n "$gap" ]; then
       echo ""
@@ -338,7 +376,10 @@ if c_git && [ "${#changed[@]}" -gt 0 ]; then
   echo ""
   if ask "Save (commit) these changes with git?"; then
     git add -- ${changed[@]+"${changed[@]}"} 2>/dev/null
-    if git commit -qm "adopt the agent standard" 2>/dev/null; then
+    # §5: agent involvement is never invisible. This commit is written by a
+    # script, so it carries the trailer even though the author line is human.
+    if git commit -q -m "adopt the agent standard" \
+                   -m "Assisted-by: agent-standard adopt (autonomous)" 2>/dev/null; then
       echo "   ✓ saved. (Undo anytime with: git revert HEAD)"
     else
       echo "   ⚠ couldn't save automatically (git may want your name/email first)."
