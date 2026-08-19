@@ -7,6 +7,23 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **§1 says what a ship gate must answer:** the skeleton's `## Before shipping`
+  line asked for "tests, lint, build" and left the two questions an agent
+  otherwise answers for itself unaddressed — what counts as done, and in what
+  order to check. Done is now defined as runtime evidence quoted from a run of
+  this change, never written code or a previous green; and the gate is an ordered
+  ladder (static → behavior → system) where a failure at one layer stops the run.
+  A clean typecheck is the layer agents over-trust, which is why the ordering is
+  written down rather than implied. This repo's own gate now follows it.
+- **§1 covers the environment:** a repo can document its build perfectly and
+  still be a broken harness if the agent cannot reproduce the toolchain. A
+  committed lockfile and a pinned runtime version are now called for, with the
+  reason they stay out of the six checks: both are language-specific, and the
+  checks are deliberately language-agnostic.
+- **`adopt --check` says what to do, not just what is missing:** every failing
+  check now prints a concrete remediation line keyed to its STD-* id. The
+  scorecard previously named the gap for the next level only, leaving the reader
+  to infer the remedy for the rest.
 - **`adopt --check` reports a drifted fix log:** §2 requires `module`, `tags`,
   `problem_type`, and `date` on every entry, and nothing checked it — STD-04
   passes on an empty `docs/solutions/` directory, so entries missing the fields
@@ -17,6 +34,16 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Fixed
 
+- **A test's `cd` leaked and voided the next test:** a new remediation test moved
+  into an empty scratch directory and never came back, so the EXAMPLE-*
+  frontmatter test that followed ran in a folder with no `docs/solutions/` and
+  passed because there was nothing to find. Under `set -uo pipefail` without
+  `-e` the failed redirect never aborted the run — the suite stayed green while
+  an assertion was dead. The block now runs in a subshell.
+- **The EXAMPLE-* exclusion test proved nothing:** it copied the shipped
+  templates, which carry complete frontmatter and so are never flagged whether
+  or not the name-based skip works. It now uses a deliberately thin `EXAMPLE-*`
+  entry, which only the skip can keep quiet.
 - **`adopt` commits now disclose agent authorship:** the wizard's `adopt the
   agent standard` commit carried no trailer, so a script-written commit was
   indistinguishable from a hand-written one. It now carries `Assisted-by:`, as

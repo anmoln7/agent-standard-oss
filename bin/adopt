@@ -88,6 +88,20 @@ fixlog_thin(){
 c_ignore() { [ -f .gitignore ] && grep -qE '^\.env' .gitignore; }     # STD-05
 c_sync()   { [ -f AGENTS.md ] && grep -q '^## Keep in sync' AGENTS.md; }  # STD-06
 
+# One concrete remediation per check, keyed by the stable ID. Printed by
+# --check for every failing check, so the scorecard says what to DO, not just
+# what is absent. Keep in lockstep with the c_* functions above.
+fix_for(){
+  case "$1" in
+    STD-01) echo "run 'git init' and make a first commit — nothing else here is recoverable without it" ;;
+    STD-02) echo "run 'adopt' to write a starter AGENTS.md, then fill in the TODOs from the real code" ;;
+    STD-03) echo "make CLAUDE.md a one-line '@AGENTS.md' include (or a symlink) so there is one source of truth" ;;
+    STD-04) echo "create docs/solutions/ and add one entry the next time you debug something twice" ;;
+    STD-05) echo "add '.env' to .gitignore — and if a secret is already committed, rotate it, don't just delete the file" ;;
+    STD-06) echo "add a '## Keep in sync' section to AGENTS.md listing which files must change together" ;;
+  esac
+}
+
 # Maturity level gates on the SHAPE of the harness, not the raw point total:
 # a repo can't be "almost perfect" while leaking secrets. Secret hygiene (STD-05)
 # is a floor for the top level, not one point among six.
@@ -138,7 +152,7 @@ scorecard_json(){
 
 scorecard(){
   if [ "$json" = 1 ]; then scorecard_json; return; fi
-  local n=0 miss=""
+  local n=0 missed=""
   echo ""
   echo "   ${BOLD}${repo_name} — checkup${RST}"
   # Outside a git repo we score $PWD as-is (deliberate: a folder can still be
@@ -148,13 +162,14 @@ scorecard(){
     echo "   ${DIM}note: $PWD is not inside a git repo — scoring this folder${RST}"
   fi
   echo "   ──────────────────────────────────────────────────────────"
-  row(){ if "$1"; then echo "   ✅ $2"; n=$((n+1)); else echo "   ⬜ $2"; [ -n "$miss" ] || miss="$2"; fi; }
-  row c_git    "Saved with git (every change can be undone)"
-  row c_agents "AGENTS.md — the one welcome note every AI assistant reads"
-  row c_claude "CLAUDE.md points at AGENTS.md (no duplicate copy to drift)"
-  row c_fixlog "docs/solutions/ — a diary of solved problems"
-  row c_ignore ".gitignore keeps secret files (.env) out of history"
-  row c_sync   "A 'Keep in sync' list so related files never disagree"
+  # row <fn> <id> <label>
+  row(){ if "$1"; then echo "   ✅ $3"; n=$((n+1)); else echo "   ⬜ $3"; missed="$missed $2"; fi; }
+  row c_git    STD-01 "Saved with git (every change can be undone)"
+  row c_agents STD-02 "AGENTS.md — the one welcome note every AI assistant reads"
+  row c_claude STD-03 "CLAUDE.md points at AGENTS.md (no duplicate copy to drift)"
+  row c_fixlog STD-04 "docs/solutions/ — a diary of solved problems"
+  row c_ignore STD-05 ".gitignore keeps secret files (.env) out of history"
+  row c_sync   STD-06 "A 'Keep in sync' list so related files never disagree"
   local bar="" i=0
   while [ "$i" -lt 6 ]; do
     if [ "$i" -lt "$n" ]; then bar="${bar}${GRN}■${RST}"; else bar="${bar}${DIM}□${RST}"; fi
@@ -180,6 +195,17 @@ scorecard(){
     if [ -n "$thin" ]; then
       echo ""
       echo "   ${DIM}note: $thin — see STANDARD.md §2 for the required fields${RST}"
+    fi
+    if [ -n "$missed" ]; then
+      echo ""
+      echo "   ${BOLD}what to fix${RST}"
+      local id
+      # $missed holds space-free STD-0N literals set right here, never user
+      # input — the unquoted split is deliberate (bash 3.2 has no arrays here).
+      # shellcheck disable=SC2086
+      for id in $missed; do
+        echo "   • ${DIM}${id}${RST} $(fix_for "$id")"
+      done
     fi
     local gap; gap="$(level_gap)"
     if [ -n "$gap" ]; then

@@ -98,7 +98,7 @@ House style, naming, patterns to follow, orphaned code NOT to recreate.
 The traps. (See docs/solutions/ for the full fix log.)
 
 ## Before shipping
-Tests, lint, build, whatever the ship gate is.
+The ship gate, in order: static → behavior → system. A failure stops the run.
 
 ## Keep in sync
 <see section 3>
@@ -110,6 +110,61 @@ Keep AGENTS.md scannable. Anything that is a *specific past incident* goes in
 Write hard rules with their exceptions attached: "never commit secrets, except
 `.env.example`" survives contact with edge cases; a bare NEVER gets ignored the
 first time an edge case makes it wrong.
+
+### What "Before shipping" has to say
+
+The `## Before shipping` line in the skeleton is a gate, and a gate is only worth
+writing down if it answers two questions the agent will otherwise answer for
+itself: *what counts as done*, and *in what order do I check*.
+
+**Done is runtime evidence, not written code.** The most common way an agent
+ships a regression is not a bad edit — it's declaring victory early. Code
+compiles, the diff looks right, the model is confident, so the work is announced
+as complete without ever running. State the bar explicitly, because the default
+bar is the agent's confidence: **a change is done when the gate has been run and
+passed on this change, and its output is quoted.** Not when the code is written,
+not when it "should work", not when a previous run passed. An agent's report that
+the tests pass is a claim about tests; it is not the tests. If the gate wasn't
+run, the honest status is "written, unverified" — which is a fine thing to say
+and a much cheaper thing to hear than a false green.
+
+**Order the gate in layers, and don't skip ahead.** List the ship gate as an
+ordered sequence, not a flat pile of commands:
+
+1. **Static** — it parses, types, lints. Cheap, fast, catches typos.
+2. **Behavior** — the tests run and pass. This is where "it compiles" stops
+   counting as evidence.
+3. **System** — the thing actually starts and does its job end to end: the
+   binary runs, the server answers, the script produces the file.
+
+Each layer is only meaningful if the one below it passed, so **a failure at layer
+N stops the run — it doesn't get noted and skipped**. The ordering exists because
+layer 1 is the layer agents over-trust: a clean typecheck feels like proof and
+proves almost nothing. Say in `AGENTS.md` which layers a given change requires —
+a comment fix may need only layer 1, but anything crossing a module boundary
+needs layer 3, because that's the boundary unit tests are least likely to cover.
+
+Repos that can express the whole ladder as one command should: `make check`, one
+script, one entry point. A single command is a gate an agent can't partially run.
+
+### The environment is part of the harness
+
+An instruction file that documents the build perfectly is still a broken harness
+if the agent can't reproduce the toolchain that build assumed. Two things belong
+in the repo, both cheap:
+
+- **A committed lockfile** (`package-lock.json`, `uv.lock`, `Cargo.lock`,
+  `go.sum`, `Gemfile.lock`, …). Without one, the agent resolves dependencies to
+  whatever is newest today, and a failure it hits is not reproducible by the next
+  session — or by you.
+- **A pinned runtime version** (`.tool-versions`, `.nvmrc`, `.python-version`, or
+  the equivalent field in the project manifest). "Works on my machine" is a
+  human-scale problem; for an agent it's a wrong-version error it will try to fix
+  by editing your code.
+
+Neither is scored by `adopt --check` — they're language-specific, and the six
+checks are deliberately language-agnostic. They are still the first thing to look
+at when an agent's failures don't reproduce.
 
 ### What good context covers: the four S's
 

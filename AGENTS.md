@@ -64,9 +64,16 @@ The traps. (Full past-incident write-ups live in [`docs/solutions/`](docs/soluti
 
 ## Before shipping
 
-`tests/run-tests.sh` passes, `shellcheck -S warning` is clean on every script, and
-nothing personal (email, org id, token, private repo name) appears in the diff — CI
-enforces all three.
+Run in order; a failure stops the run rather than being noted and skipped.
+
+1. **Static** — `bash -n` parses every script and `shellcheck -S warning` is clean
+   (see the exact paths in `## Commands`).
+2. **Behavior** — `tests/run-tests.sh` passes.
+3. **System** — `bin/adopt --check` still scores this repo 6/6, and nothing
+   personal (email, org id, token, private repo name) appears in the diff.
+
+CI enforces all three. A change is done when this gate has been run on *this*
+change and its output quoted — not when the edit looks right.
 
 ## Keep in sync
 

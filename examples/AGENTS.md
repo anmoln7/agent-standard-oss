@@ -39,8 +39,15 @@ The traps. (Full past-incident write-ups live in [`docs/solutions/`](./docs/solu
 
 ## Before shipping
 
-`npm run lint && npm test` must pass. Run `npm run test:e2e` for any change under
-`src/services/pricing.ts` or the checkout flow.
+Run in order; a failure stops the run rather than being noted and skipped.
+
+1. **Static** — `npm run lint` and `npm run typecheck` are clean.
+2. **Behavior** — `npm test` passes.
+3. **System** — `npm run test:e2e`, required for any change under
+   `src/services/pricing.ts` or the checkout flow.
+
+A change is done when this gate has been run on *this* change and its output
+quoted — not when the code looks right.
 
 ## Keep in sync
 

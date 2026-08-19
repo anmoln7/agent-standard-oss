@@ -277,9 +277,32 @@ printf -- '---\ntags: [a]\ndate: 2026-01-01\n---\n\n## Problem\nx\n' > docs/solu
   && ok "a drifted fix log still scores 6/6 (score is not moved)" \
   || no "the frontmatter note must not change the score"
 
-# the shipped templates are scaffolding, not the repo's own entries
+# every failing check names a concrete fix — a scorecard that only says what is
+# absent makes the reader guess the remedy
+mkdir -p "$TMP/fixtext"
+out="$(cd "$TMP/fixtext" && "$BIN/adopt" --check 2>&1)"
+printf '%s' "$out" | grep -q 'what to fix' \
+  && ok "a failing check prints a 'what to fix' block" \
+  || no "failing checks must print remediation text"
+n=$(printf '%s\n' "$out" | grep -cE '^   . STD-0[1-6] [^ ].*')
+[ "$n" = "6" ] \
+  && ok "all six failing checks each get their own fix line" \
+  || no "expected 6 non-empty fix lines on an empty folder, got $n"
+printf '%s' "$out" | grep -q "STD-05 add '.env' to .gitignore" \
+  && ok "a fix line names the actual remedy, not just the id" \
+  || no "STD-05 must print its remediation text"
+printf '%s' "$out" | grep -q 'AGENTS.md — the one welcome note' \
+  && ok "the scorecard still prints plain-English labels, not raw ids" \
+  || no "row() must print the label, not the check id"
+(cd "$ROOT" && "$BIN/adopt" --check 2>&1) | grep -q 'what to fix' \
+  && no "a 6/6 repo must not print a fix block" \
+  || ok "a fully-passing repo prints no fix block"
+
+# the shipped templates are scaffolding, not the repo's own entries. Use a
+# deliberately THIN EXAMPLE-* file: the real templates carry full frontmatter, so
+# copying them would pass whether or not the name-based exclusion works.
 printf -- '---\nmodule: m\ntags: [a]\nproblem_type: bug\ndate: 2026-01-01\n---\n' > docs/solutions/drifted.md
-cp "$ROOT"/templates/docs/solutions/EXAMPLE-*.md docs/solutions/ 2>/dev/null
+printf -- '---\ntags: [a]\n---\n' > docs/solutions/EXAMPLE-thin.md
 "$BIN/adopt" --check 2>&1 | grep -q 'missing required frontmatter' \
   && no "EXAMPLE-* templates must not count as drifted entries" \
   || ok "shipped EXAMPLE-* templates don't trigger the frontmatter note"
