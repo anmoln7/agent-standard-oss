@@ -7,6 +7,31 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **§3 covers claims that must be recomputed:** the section handled drift between
+  two files and drift in a lone stale fact, but both assume the claim has a
+  source you can re-read. A judgment about state — `status: complete`, `done`,
+  `shipped` — has no such source, so nothing drifts against it and no rule fired,
+  leaving a status from abandoned work asserting itself to every agent that reads
+  the file. Where the repo already holds the evidence, the status is now derived
+  a second way from its own parts and the disagreement reported. Four rules keep
+  it honest: the authored value stays authoritative (warn, never rewrite), the
+  finding shows the derivation's inputs including the empty ones, and drift is
+  counted rather than gated. Scoped to derivations that are cheap and
+  unambiguous — a derived status that is itself a guess is a second unreliable
+  claim, not a check on the first.
+- **§4 covers context-injecting session hooks:** the section was scoped to
+  repairing config that fails silently and said nothing about a `SessionStart`
+  hook that injects orienting state, so the obvious implementation — a
+  hand-maintained blob injected every session — was the §1 duplication failure
+  arriving through a mechanism §1 never mentions. Such a hook must now derive its
+  content from repo state rather than carry it, declare what it is *not* (a
+  health summary read as a task list, a diagnostics list worked through as a
+  startup checklist), and mark cached data stale inline where a reader cannot
+  miss it.
+- **§9 prefers a derived queue over a hand-maintained one:** the queue already
+  had to be readable by any agent, which a committed status field satisfies while
+  still being wrong. Where queue state can be derived from the work itself, the
+  derivation now wins — it is the only kind that survives a long unattended run.
 - **§1 says what a ship gate must answer:** the skeleton's `## Before shipping`
   line asked for "tests, lint, build" and left the two questions an agent
   otherwise answers for itself unaddressed — what counts as done, and in what

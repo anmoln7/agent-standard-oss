@@ -522,6 +522,41 @@ skills:
   surface. Either pin it with a sync rule, or replace it with the command that
   derives it.
 
+### The third kind: claims that must be recomputed
+
+Both rules above assume the stale claim has a source you can re-read — a version
+in `package.json`, a command in a workflow file. Some claims have no such source
+because they *are* a judgment: `status: complete`, `done`, `shipped`, `active`.
+Nothing drifts *against* them, so no sync rule fires, and a status left behind by
+abandoned work keeps asserting itself to every agent that reads the file.
+
+Where the repo already contains the evidence for such a judgment, derive it a
+second way and compare:
+
+- **Compute the status from its own parts.** A spec's status is decidable from
+  the state of the tickets it owns, the checkboxes it lists, the acceptance
+  criteria signed off against it. A milestone's is decidable from its
+  checkpoints. Where such a derivation exists, a check can compute it without any
+  external source of truth and flag the disagreement — which is what makes this
+  reachable where the two rules above are not.
+- **The authored value stays authoritative.** Report the disagreement; never
+  silently rewrite it. A human may know something the derivation cannot see —
+  and a check that overrules people gets switched off the first time it is
+  wrong. This is a *warning*, distinct from the errors that stop a ship gate.
+- **Show the derivation's inputs in the finding.** "Derived `in-review` from open
+  tickets [#13] and unsigned ACs [none]" lets a reader adjudicate on the spot; a
+  bare "status drift" sends them to re-derive it. Name empty inputs explicitly,
+  so "checked, found none" is distinguishable from "not checked".
+- **Count it, don't gate on it.** Drift is a number that should trend down, in
+  the same spirit as §2's debt ratchet — not a wall that blocks the commit.
+  Attribute the count by source when it spans systems, so a rise points at what
+  rotted.
+
+Reach for this only where the derivation is cheap and unambiguous. A derived
+status that is itself a guess is a second unreliable claim, not a check on the
+first — and §9's rule that an uncalibrated checker is worse than none applies
+here exactly as it does to model-graded review.
+
 ---
 
 ## 4. Self-healing SessionStart hook
@@ -559,6 +594,26 @@ generically-useful things, both cross-platform-guarded:
 
 Adapt the env-file path and dir per repo. Skip the hook entirely where there's no
 silent-failure config to heal. Do not add ceremony for its own sake.
+
+### The other job: injecting orienting context
+
+A `SessionStart` hook may also *inject orienting context* — repo state, open
+work, health — so a session starts with its bearings instead of re-deriving them.
+That is a different job from the repair above and carries its own risk: it spends
+prompt space on every session, and it is a second place for repo facts to live
+(§1). Three disciplines keep it honest:
+
+- **Derive it, never hand-write it.** Injected context is generated from repo
+  state at session start. The moment it becomes a maintained prose blob, it is a
+  second source of truth and it will drift — the exact failure §1 exists to
+  prevent, reintroduced through the back door.
+- **State what it is not.** A snapshot that doesn't say *"this is a health
+  summary, not a task list"* gets read as a task list. Say which of its commands
+  are diagnostics to run on demand rather than a startup checklist — otherwise a
+  dutiful agent runs all of them before touching the actual task.
+- **Mark staleness inline.** Anything cached carries its age and its nature next
+  to the data — *"cached, not live"* — where a reader cannot miss it. A stale
+  fact presented as current is worse than an absent one.
 
 ---
 
@@ -784,7 +839,10 @@ are the state, context is scarce, and the user is not a polling target.
   actions without a plan default, or genuine product choices. Record non-blocking
   uncertainty in a file and proceed with the plan default. The queue itself must
   be readable by any agent — a committed `TODOS.md` or a tracker reachable by
-  CLI, never a list that lives only in chat memory.
+  CLI, never a list that lives only in chat memory. Where the queue's state can
+  be derived from the work itself, prefer the derivation over the
+  hand-maintained field (§3): a queue whose entries can be checked against
+  reality is the only kind that survives a long unattended run.
 - **Quiet is not dead.** Don't declare a long-running job failed from one stale
   signal (a silent log, a missing PID). Reconcile several — process identity,
   status file, output mtime, dirty tree — before discarding work. After a context
