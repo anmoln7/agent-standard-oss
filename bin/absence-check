@@ -78,6 +78,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=examples --exclude-dir=example --exclude-dir=demo \
     --exclude-dir=chunks --exclude-dir=Resources --exclude-dir=.output \
     --exclude-dir=.obsidian --exclude-dir=bower_components --exclude-dir=Pods \
+    --exclude-dir=static --exclude-dir=public \
     --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
     --include='*.mjs' --include='*.cjs' --include='*.vue' --include='*.svelte' \
     --include='*.py' --include='*.go' --include='*.rb' --include='*.java' \
@@ -88,7 +89,8 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude='*_test.rb' --exclude='*Test.java' --exclude='*Test.kt' \
     --exclude='tests.py' --exclude='tests.js' --exclude='conftest.py' \
     --exclude='*.map' --exclude='*.min.js' --exclude='*.min.mjs' \
-    --exclude='*.bundle.*' --exclude='chunk-*' --exclude='*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.mjs' \
+    --exclude='*.bundle.*' --exclude='*-bundle.js' --exclude='chunk-*' \
+    --exclude='*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.mjs' \
     -- "$pat" "$dir" 2>/dev/null
 }
 
@@ -156,7 +158,7 @@ if [ "$mode" = "controls" ]; then
   report "input-valid" '(from .?zod|from .?joi|from .?yup|import zod|pydantic|express-validator|z\.object|\.safeParse\()' "$dir" on
   report "backups"     '(pg_dump|mysqldump|pg_basebackup|\bPITR\b|wal-g|barman)'                     "$dir" off
   report "alerting"    '(pagerduty|opsgenie|@sentry|datadog|prometheus|createAlert)'               "$dir" off
-  report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler|service_account|client_secret|oauth2\.credentials|InstalledAppFlow|_CREDENTIALS)' "$dir" off
+  report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler|service_account|client_secret|oauth2\.credentials|InstalledAppFlow|CREDENTIALS_(PATH|FILE|JSON))' "$dir" off
   exit 0
 fi
 

@@ -581,6 +581,38 @@ line="$("$BIN/absence-check" --controls "$demo_repo" | awk '$1=="auth"{print $2}
   && ok "a control only in a single-file tests.py does not confirm it" \
   || no "tests.py should not confirm auth, got: $line"
 
+# a minified vendor bundle in static/ (swagger-ui) is not the app's source
+static_repo="$TMP/acrepo-static"
+mkdir -p "$static_repo/app/static" "$static_repo/app"
+printf 'const app = 1\n'                             > "$static_repo/app/main.ts"  # real source
+printf 'var x=authenticate,y=service_account\n'      > "$static_repo/app/static/swagger-ui-bundle.js"
+line="$("$BIN/absence-check" --controls "$static_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a vendor bundle in static/ does not confirm a control" \
+  || no "static/ bundle should not confirm auth, got: $line"
+# ...but excluding static/ must not blind the scan to real source elsewhere
+printf 'export function requireAuth(){}\n' > "$static_repo/app/guard.ts"
+line="$("$BIN/absence-check" --controls "$static_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "CONFIRMED" ] \
+  && ok "excluding static/ still scans real source outside it" \
+  || no "real auth outside static/ should be CONFIRMED, got: $line"
+
+# the secrets pattern must not match the CORS header ALLOW_CREDENTIALS, but must
+# still match a real credential path/file token.
+cors_repo="$TMP/acrepo-cors"
+mkdir -p "$cors_repo/src"
+printf 'headers.remove(ACCESS_CONTROL_ALLOW_CREDENTIALS)\n' > "$cors_repo/src/cors.rs"
+printf 'FROM rust:1\n' > "$cors_repo/Dockerfile"
+line="$("$BIN/absence-check" --controls "$cors_repo" | awk '$1=="secrets-mgr"{print $2}')"
+[ "$line" != "CONFIRMED" ] \
+  && ok "ALLOW_CREDENTIALS (a CORS header) does not confirm secrets (got $line)" \
+  || no "CORS ALLOW_CREDENTIALS should not confirm secrets, got: $line"
+printf 'GOOGLE_CREDENTIALS_PATH = env("x")\n' > "$cors_repo/src/creds.py"
+line="$("$BIN/absence-check" --controls "$cors_repo" | awk '$1=="secrets-mgr"{print $2}')"
+[ "$line" = "CONFIRMED" ] \
+  && ok "a real CREDENTIALS_PATH token still confirms secrets" \
+  || no "CREDENTIALS_PATH should confirm secrets, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]
