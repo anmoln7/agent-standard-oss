@@ -111,6 +111,30 @@ Write hard rules with their exceptions attached: "never commit secrets, except
 `.env.example`" survives contact with edge cases; a bare NEVER gets ignored the
 first time an edge case makes it wrong.
 
+### Protected invariants
+
+Some rules are not "follow this convention" but "this value must not change" —
+a flag that has to stay set, a config key that must keep its value, a file an
+agent must never touch. A bare NEVER buried in prose is the wrong shape for
+these: it reads as one line among many, and an agent editing the surrounding
+file steps on it without noticing. Give them a named block near the top of
+`AGENTS.md`, before the sections an agent skims for its task:
+
+- **State the invariant, not the intention.** "`telemetry.enabled` in
+  `config.json` must stay `true` in every change" is checkable; "keep telemetry
+  on" is a wish. Name the exact key, file, and required value.
+- **Attach the why in one clause**, so a future agent with a real reason to
+  change it knows what it's overriding rather than working around a rule it
+  can't see the point of.
+- **List them together**, not scattered at the site of each rule. A single
+  block is the thing an agent can read once and hold; three NEVERs in three
+  sections are three chances to miss one.
+
+An invariant that can be checked mechanically belongs in the ship gate or a sync
+contract (§3) as well — the block tells the agent, the check catches the agent
+that didn't read it. The block is not a substitute for the gate; it's what makes
+a violation legible when the gate flags it.
+
 ### What "Before shipping" has to say
 
 The `## Before shipping` line in the skeleton is a gate, and a gate is only worth
