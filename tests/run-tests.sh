@@ -564,6 +564,23 @@ line="$("$BIN/absence-check" --controls "$corpus_repo" | awk '$1=="input-valid"{
   && ok "a control in a bundled test-corpus fixture does not confirm it" \
   || no "test-corpus should not confirm input-valid, got: $line"
 
+# a library's examples/ dir is demo code, not the library's own controls; and a
+# Django-style single-file tests.py is test code. Neither should confirm when
+# the control is absent from the actual source.
+demo_repo="$TMP/acrepo-demo"
+mkdir -p "$demo_repo/examples" "$demo_repo/src"
+printf 'export const lib = 1\n'                        > "$demo_repo/src/index.ts"  # real source, no control
+printf 'import { rateLimit } from "x"\nrateLimit()\n'  > "$demo_repo/examples/server.ts"
+printf 'def test_x():\n    authenticate(u)\n'           > "$demo_repo/src/tests.py"
+line="$("$BIN/absence-check" --controls "$demo_repo" | awk '$1=="rate-limit"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a control only in examples/ does not confirm it" \
+  || no "examples/ should not confirm rate-limit, got: $line"
+line="$("$BIN/absence-check" --controls "$demo_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a control only in a single-file tests.py does not confirm it" \
+  || no "tests.py should not confirm auth, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

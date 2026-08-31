@@ -75,6 +75,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=test-corpus --exclude-dir=testdata --exclude-dir=__mocks__ \
     --exclude-dir=tests --exclude-dir=test --exclude-dir=__tests__ \
     --exclude-dir=spec --exclude-dir=mod_test \
+    --exclude-dir=examples --exclude-dir=example --exclude-dir=demo \
     --exclude-dir=chunks --exclude-dir=Resources --exclude-dir=.output \
     --exclude-dir=.obsidian --exclude-dir=bower_components --exclude-dir=Pods \
     --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
@@ -85,6 +86,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude='*.test.*' --exclude='*.spec.*' --exclude='test_*.py' \
     --exclude='*_test.py' --exclude='*_test.go' --exclude='*_test.rs' \
     --exclude='*_test.rb' --exclude='*Test.java' --exclude='*Test.kt' \
+    --exclude='tests.py' --exclude='tests.js' --exclude='conftest.py' \
     --exclude='*.map' --exclude='*.min.js' --exclude='*.min.mjs' \
     --exclude='*.bundle.*' --exclude='chunk-*' --exclude='*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.mjs' \
     -- "$pat" "$dir" 2>/dev/null
