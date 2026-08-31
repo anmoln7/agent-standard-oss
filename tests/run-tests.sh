@@ -553,6 +553,17 @@ line="$("$BIN/absence-check" --controls "$vend_repo" | awk '$1=="auth"{print $2}
   && ok "a control in a vendored .obsidian plugin does not confirm it" \
   || no ".obsidian/plugins should not confirm auth, got: $line"
 
+# a bundled test corpus (sample projects used as fixtures) is not the tool's
+# own source: a control inside assets/test-corpus/ must not confirm.
+corpus_repo="$TMP/acrepo-corpus"
+mkdir -p "$corpus_repo/assets/test-corpus/sample/src" "$corpus_repo/src"
+printf 'export const app = 1\n'      > "$corpus_repo/src/app.ts"  # real source
+printf 'import { z } from "zod"\n'   > "$corpus_repo/assets/test-corpus/sample/src/Root.tsx"
+line="$("$BIN/absence-check" --controls "$corpus_repo" | awk '$1=="input-valid"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a control in a bundled test-corpus fixture does not confirm it" \
+  || no "test-corpus should not confirm input-valid, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

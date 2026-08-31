@@ -72,6 +72,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=.readiness-audit \
     --exclude-dir=docs --exclude-dir=doc --exclude-dir=tools --exclude-dir=scripts \
     --exclude-dir=fixtures --exclude-dir=__fixtures__ --exclude-dir=e2e \
+    --exclude-dir=test-corpus --exclude-dir=testdata --exclude-dir=__mocks__ \
     --exclude-dir=tests --exclude-dir=test --exclude-dir=__tests__ \
     --exclude-dir=spec --exclude-dir=mod_test \
     --exclude-dir=chunks --exclude-dir=Resources --exclude-dir=.output \
