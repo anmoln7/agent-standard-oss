@@ -437,6 +437,31 @@ line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2
   && ok "the same token in application source confirms the control" \
   || no "a control in src should be CONFIRMED, got: $line"
 
+# false NOT_FOUND is the tool's worst failure, and it does NOT claim to prevent
+# it: a control present but written in a form no pattern matches reads NOT_FOUND.
+# This test documents that honestly — an auth check via a name the pattern misses
+# is not confirmed, so NOT_FOUND must never be read as "the control is absent".
+fn_repo="$TMP/acrepo-fn"
+mkdir -p "$fn_repo/src"
+printf 'export function gateRequest(u){ return u.session }\n' > "$fn_repo/src/guard.ts"
+[ "$(state 'gateRequest' "$fn_repo")" = "CONFIRMED" ] \
+  && ok "the control exists (found by its real name)" \
+  || no "gateRequest should be findable by its own name"
+line="$("$BIN/absence-check" --controls "$fn_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a present control the patterns miss reads NOT_FOUND (a known limit, not proof of absence)" \
+  || no "auth via an unmatched name should be NOT_FOUND, got: $line"
+
+# substring guard: `joi` must not match inside `join`. This exact false positive
+# (379 junk hits) is what an earlier loose pattern produced on a real repo.
+sub_repo="$TMP/acrepo-sub"
+mkdir -p "$sub_repo/src"
+printf "const s = ['a','b'].join('+')\n" > "$sub_repo/src/util.ts"
+line="$("$BIN/absence-check" --controls "$sub_repo" | awk '$1=="input-valid"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "the input-valid pattern does not match 'joi' inside 'join'" \
+  || no "join() must not confirm input-valid, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

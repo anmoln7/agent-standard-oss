@@ -17,6 +17,21 @@
 # as code, in which case the repo owns that surface and the miss becomes a real
 # NOT FOUND. Silence off the surface the repo owns is never reported as absent.
 #
+# What CONFIRMED means, and what it does not. CONFIRMED says a known signal for a
+# control was matched — not that the control is correct, sufficient, or even real
+# (a variable named `authenticate` counts). Just as important: a control that IS
+# present but written in a form these patterns do not match reports NOT_FOUND — a
+# false absence this tool cannot rule out. So NOT_FOUND means "no known signal in
+# reviewed scope," never "the control does not exist." Treat every verdict as a
+# pointer to go look, not a proof.
+#
+# The --controls set (auth, rate-limit, input-valid, backups, alerting, secrets)
+# is a starting convention lifted from common web-app controls, not an audited or
+# complete list. It is meant to be edited per repo. Patterns favour precision over
+# recall on purpose: a loose pattern that matches a word inside another word
+# (`joi` inside `join`) manufactures false CONFIRMEDs, which is the worse failure
+# for an absence tool. When in doubt, miss and report NOT_FOUND.
+#
 # Read-only: greps and reports, writes nothing. Exit 0 always (a verdict is not
 # a failure); use the printed state, not the exit code.
 set -uo pipefail
@@ -99,7 +114,7 @@ if [ "$mode" = "controls" ]; then
   # control | pattern | on/off-source (off = normally lives outside app code)
   report "auth"        '(authenticate|requireAuth|isAuthenticated|@login_required|ensureLoggedIn)' "$dir" on
   report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit)'                     "$dir" on
-  report "input-valid" '(zod|joi|yup|pydantic|express-validator|\.(parse|validate)\()'             "$dir" on
+  report "input-valid" '(from .?zod|from .?joi|from .?yup|import zod|pydantic|express-validator|z\.object|\.safeParse\()' "$dir" on
   report "backups"     '(pg_dump|mysqldump|pg_basebackup|point-in-time|PITR)'                       "$dir" off
   report "alerting"    '(pagerduty|opsgenie|@sentry|datadog|prometheus|createAlert)'               "$dir" off
   report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler)'                    "$dir" off
