@@ -581,7 +581,9 @@ line="$("$BIN/absence-check" --controls "$demo_repo" | awk '$1=="auth"{print $2}
   && ok "a control only in a single-file tests.py does not confirm it" \
   || no "tests.py should not confirm auth, got: $line"
 
-# a minified vendor bundle in static/ (swagger-ui) is not the app's source
+# a minified vendor bundle (swagger-ui) is not the app's source: it is skipped
+# by the *-bundle.js file exclude, not by excluding the static/ dir — static/
+# holds real first-party source in many stacks and must stay in scope.
 static_repo="$TMP/acrepo-static"
 mkdir -p "$static_repo/app/static" "$static_repo/app"
 printf 'const app = 1\n'                             > "$static_repo/app/main.ts"  # real source
@@ -590,12 +592,13 @@ line="$("$BIN/absence-check" --controls "$static_repo" | awk '$1=="auth"{print $
 [ "$line" = "NOT_FOUND" ] \
   && ok "a vendor bundle in static/ does not confirm a control" \
   || no "static/ bundle should not confirm auth, got: $line"
-# ...but excluding static/ must not blind the scan to real source elsewhere
-printf 'export function requireAuth(){}\n' > "$static_repo/app/guard.ts"
+# real hand-written source inside static/ must still be scanned — excluding the
+# dir by name would turn a real control into a false NOT_FOUND
+printf 'export function requireAuth(){}\n' > "$static_repo/app/static/guard.ts"
 line="$("$BIN/absence-check" --controls "$static_repo" | awk '$1=="auth"{print $2}')"
 [ "$line" = "CONFIRMED" ] \
-  && ok "excluding static/ still scans real source outside it" \
-  || no "real auth outside static/ should be CONFIRMED, got: $line"
+  && ok "real source inside static/ is still scanned" \
+  || no "real auth in static/ should be CONFIRMED, got: $line"
 
 # the secrets pattern must not match the CORS header ALLOW_CREDENTIALS, but must
 # still match a real credential path/file token.

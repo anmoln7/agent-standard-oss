@@ -57,12 +57,12 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
   # restrict to source extensions and skip docs, build tooling, and tests (across
   # JS/Python/Go/Rust/Ruby/Java conventions). Exclude this script itself — its
   # control patterns are written here as literals and would self-match.
-#
-# One class of false CONFIRMED remains that scoping cannot fix: a control name
-# used as DATA rather than as a control — "datadog" and "pagerduty" listed as
-# labels in an integrations picker, say. grep cannot tell the string from the
-# usage, so treat a CONFIRMED as "a known signal appears here", then read the
-# cited line to see whether it is the control or just its name.
+  #
+  # One class of false CONFIRMED remains that scoping cannot fix: a control name
+  # used as DATA rather than as a control — "datadog" and "pagerduty" listed as
+  # labels in an integrations picker, say. grep cannot tell the string from the
+  # usage, so treat a CONFIRMED as "a known signal appears here", then read the
+  # cited line to see whether it is the control or just its name.
   grep -RInE --binary-files=without-match \
     --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor \
     --exclude-dir=.venv --exclude-dir=venv --exclude-dir=dist --exclude-dir=build \
@@ -78,7 +78,6 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=examples --exclude-dir=example --exclude-dir=demo \
     --exclude-dir=chunks --exclude-dir=Resources --exclude-dir=.output \
     --exclude-dir=.obsidian --exclude-dir=bower_components --exclude-dir=Pods \
-    --exclude-dir=static --exclude-dir=public \
     --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
     --include='*.mjs' --include='*.cjs' --include='*.vue' --include='*.svelte' \
     --include='*.py' --include='*.go' --include='*.rb' --include='*.java' \
