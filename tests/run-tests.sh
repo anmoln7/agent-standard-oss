@@ -462,6 +462,27 @@ line="$("$BIN/absence-check" --controls "$sub_repo" | awk '$1=="input-valid"{pri
   && ok "the input-valid pattern does not match 'joi' inside 'join'" \
   || no "join() must not confirm input-valid, got: $line"
 
+# auth must confirm on code, not on the word 'authenticate' in a comment/string
+prose_repo="$TMP/acrepo-prose"
+mkdir -p "$prose_repo/src"
+printf '# users never need to re-authenticate here\nconst msg = "please authenticate soon"\n' \
+  > "$prose_repo/src/notes.ts"
+line="$("$BIN/absence-check" --controls "$prose_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "auth does not confirm on the word in comments/strings" \
+  || no "auth prose-only should be NOT_FOUND, got: $line"
+
+# inline OAuth credential handling is a secrets control, not a false NOT_FOUND
+oauth_repo="$TMP/acrepo-oauth"
+mkdir -p "$oauth_repo/src"
+printf 'from google.oauth2 import service_account\nflow = InstalledAppFlow.from_client_secrets_file(p)\n' \
+  > "$oauth_repo/src/auth.py"
+printf 'FROM python:3.12\n' > "$oauth_repo/Dockerfile"
+line="$("$BIN/absence-check" --controls "$oauth_repo" | awk '$1=="secrets-mgr"{print $2}')"
+[ "$line" = "CONFIRMED" ] \
+  && ok "inline OAuth credential handling confirms secrets, not a false NOT_FOUND" \
+  || no "service_account/InstalledAppFlow should confirm secrets, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

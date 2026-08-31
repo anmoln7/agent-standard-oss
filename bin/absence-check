@@ -112,12 +112,12 @@ dir="${2:-.}"
 if [ "$mode" = "controls" ]; then
   dir="${1:-.}"
   # control | pattern | on/off-source (off = normally lives outside app code)
-  report "auth"        '(authenticate|requireAuth|isAuthenticated|@login_required|ensureLoggedIn)' "$dir" on
+  report "auth"        '(requireAuth|isAuthenticated|ensureLoggedIn|@login_required|authenticate\(|def authenticate|InstalledAppFlow|OAuth2?Flow)' "$dir" on
   report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit)'                     "$dir" on
   report "input-valid" '(from .?zod|from .?joi|from .?yup|import zod|pydantic|express-validator|z\.object|\.safeParse\()' "$dir" on
   report "backups"     '(pg_dump|mysqldump|pg_basebackup|point-in-time|PITR)'                       "$dir" off
   report "alerting"    '(pagerduty|opsgenie|@sentry|datadog|prometheus|createAlert)'               "$dir" off
-  report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler)'                    "$dir" off
+  report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler|service_account|client_secret|oauth2\.credentials|InstalledAppFlow|_CREDENTIALS)' "$dir" off
   exit 0
 fi
 
