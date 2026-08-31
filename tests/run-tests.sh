@@ -415,10 +415,13 @@ line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2
   && ok "the same miss becomes NOT_FOUND once the repo ships IaC" \
   || no "backups with IaC should be NOT_FOUND, got: $line"
 
-# the script must not report its own control literals as a match
-[ "$(state 'RateLimiter' "$BIN")" = "NOT_FOUND" ] \
+# the script must not report its own control literals as a match. bin/ holds no
+# scannable source (bash isn't in the include list), so assert on the hit count,
+# not the verdict — an empty scope is UNVERIFIED regardless of self-matching.
+hits="$("$BIN/absence-check" --json 'RateLimiter' "$BIN" | sed -E 's/.*"hits":([0-9]+).*/\1/')"
+[ "$hits" = "0" ] \
   && ok "scanning bin/ does not self-match the control patterns" \
-  || no "absence-check should exclude itself from the scan"
+  || no "absence-check should exclude itself from the scan, got hits=$hits"
 
 # a real control token that lives ONLY in docs and a *.test file must not
 # confirm the control: scope is application source, not the whole text tree.
@@ -488,12 +491,31 @@ line="$("$BIN/absence-check" --controls "$oauth_repo" | awk '$1=="secrets-mgr"{p
 # citation would mislead even when the verdict happens to be right elsewhere.
 test_repo="$TMP/acrepo-tests"
 mkdir -p "$test_repo/src"
+printf 'export const app = 1\n'                    > "$test_repo/src/app.ts"  # real source, so scope isn't empty
 printf 'def test_retry():\n    assert rate_limit(3)\n' > "$test_repo/src/test_retry.py"
 printf 'fn rate_limit_test() { let _ = rate_limit(); }\n' > "$test_repo/src/limiter_test.rs"
 line="$("$BIN/absence-check" --controls "$test_repo" | awk '$1=="rate-limit"{print $2}')"
 [ "$line" = "NOT_FOUND" ] \
   && ok "a control only in test files (py/rs) does not confirm it" \
   || no "test-only rate_limit should be NOT_FOUND, got: $line"
+
+# empty scope: a repo whose only code is in excluded dirs (scripts/) was never
+# scanned, so NOT_FOUND would be a false absence — every verdict must be
+# UNVERIFIED. Distinguishes "looked, found nothing" from "had nothing to look at".
+empty_repo="$TMP/acrepo-empty"
+mkdir -p "$empty_repo/scripts"
+printf 'def requireAuth(): pass\n' > "$empty_repo/scripts/only-here.py"  # in an excluded dir
+line="$("$BIN/absence-check" --controls "$empty_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "UNVERIFIED" ] \
+  && ok "no scannable source makes every verdict UNVERIFIED, not a false NOT_FOUND" \
+  || no "empty-scope auth should be UNVERIFIED, got: $line"
+
+# and once real source exists, the same repo reports NOT_FOUND honestly
+printf 'const x = 1\n' > "$empty_repo/app.ts"
+line="$("$BIN/absence-check" --controls "$empty_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "with scannable source present, a missing control is NOT_FOUND" \
+  || no "with source, empty-scope auth should be NOT_FOUND, got: $line"
 
 echo ""
 echo "passed: $pass, failed: $fail"

@@ -16,6 +16,9 @@
 # routing) are UNVERIFIED on a zero hit — UNLESS the repo ships infrastructure
 # as code, in which case the repo owns that surface and the miss becomes a real
 # NOT FOUND. Silence off the surface the repo owns is never reported as absent.
+# The same rule applies to the tool itself: if a repo keeps all its code in a
+# skipped dir (scripts/, tests/) so the scan saw no source at all, every verdict
+# is UNVERIFIED — a NOT FOUND over an empty scope would be a false absence.
 #
 # What CONFIRMED means, and what it does not. CONFIRMED says a known signal for a
 # control was matched — not that the control is correct, sufficient, or even real
@@ -88,21 +91,38 @@ owns_infra(){ # owns_infra <dir>  → exit 0 if the repo ships IaC
   return 1
 }
 
-# state <hitcount> <off_source> <dir>  → CONFIRMED | NOT_FOUND | UNVERIFIED
+# Did the scan have any application source to look at? If a repo keeps all its
+# code in scripts/ or tests/ (both excluded), the scan sees nothing — and a
+# NOT_FOUND over an empty scope is a false absence: the tool looked at nothing
+# and reported "not there". This applies the scope rule to the tool itself.
+has_source(){ # has_source <dir>  → exit 0 if scan() would see at least one file
+  # No pipe to head here: head closing early gives scan a SIGPIPE, which under
+  # `pipefail` makes the pipeline fail even when there was output. Count instead.
+  local n
+  n="$(scan '.' "$dir" | grep -c . )"
+  [ "$n" -gt 0 ]
+}
+
+# state <hitcount> <off_source> <dir> <has_src>  → CONFIRMED | NOT_FOUND | UNVERIFIED
 verdict(){
-  local hits="$1" off="$2" dir="$3"
+  local hits="$1" off="$2" dir="$3" has_src="$4"
   if [ "$hits" -gt 0 ]; then echo "CONFIRMED"; return; fi
+  # zero hits with no source in scope: silence over nothing proves nothing.
+  if [ "$has_src" = "no" ]; then echo "UNVERIFIED"; return; fi
   # zero hits. off-source controls need the repo to own the surface.
   if [ "$off" = "off" ] && ! owns_infra "$dir"; then echo "UNVERIFIED"; else echo "NOT_FOUND"; fi
 }
 
 # report <label> <pattern> <dir> <off_source>
+# Set once per run (in the caller) so has_source() isn't recomputed per control.
+HAS_SRC="yes"
+
 report(){
   local label="$1" pat="$2" dir="$3" off="$4"
   local matches count first state
   matches="$(scan "$pat" "$dir")"
   count="$(printf '%s' "$matches" | grep -c . )"
-  state="$(verdict "$count" "$off" "$dir")"
+  state="$(verdict "$count" "$off" "$dir" "$HAS_SRC")"
   first="$(printf '%s\n' "$matches" | head -3 | cut -d: -f1-2 | paste -sd'; ' -)"
   if [ "$json" = 1 ]; then
     printf '{"control":"%s","pattern":"%s","hits":%s,"state":"%s","paths":"%s"}\n' \
@@ -117,6 +137,7 @@ dir="${2:-.}"
 
 if [ "$mode" = "controls" ]; then
   dir="${1:-.}"
+  has_source "$dir" || HAS_SRC="no"
   # control | pattern | on/off-source (off = normally lives outside app code)
   report "auth"        '(requireAuth|isAuthenticated|ensureLoggedIn|@login_required|authenticate\(|def authenticate|InstalledAppFlow|OAuth2?Flow)' "$dir" on
   report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit)'                     "$dir" on
@@ -129,5 +150,6 @@ fi
 
 pat="${1:-}"
 [ -n "$pat" ] || { echo "usage: absence-check <pattern> [dir]  |  absence-check --controls [dir]"; exit 1; }
+has_source "$dir" || HAS_SRC="no"
 # a bare pattern is treated as on-source (its absence is NOT FOUND on zero hits).
 report "$pat" "$pat" "$dir" on
