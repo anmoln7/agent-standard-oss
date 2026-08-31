@@ -420,6 +420,23 @@ line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2
   && ok "scanning bin/ does not self-match the control patterns" \
   || no "absence-check should exclude itself from the scan"
 
+# a real control token that lives ONLY in docs and a *.test file must not
+# confirm the control: scope is application source, not the whole text tree.
+mkdir -p "$ac_repo/docs"
+printf 'Someday run pg_dump nightly.\n'            > "$ac_repo/docs/plan.md"
+printf "it('runs pg_dump', () => {})\n"            > "$ac_repo/src/sync.test.ts"
+line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a real control token only in docs/test files does not confirm it" \
+  || no "docs/test-fixture mentions should not confirm a control, got: $line"
+
+# but the same token in real source DOES confirm it
+printf 'import { exec } from "child_process"; exec("pg_dump db")\n' > "$ac_repo/src/backup.ts"
+line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2}')"
+[ "$line" = "CONFIRMED" ] \
+  && ok "the same token in application source confirms the control" \
+  || no "a control in src should be CONFIRMED, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

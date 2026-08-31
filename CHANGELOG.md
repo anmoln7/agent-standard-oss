@@ -15,6 +15,8 @@ All notable changes to agent-standard are documented here. Versions follow
   repo owns the surface the control would live on — off-source controls (backups,
   alerting, secrets) stay `UNVERIFIED` until the repo ships infrastructure as
   code, at which point the same miss becomes a real `NOT_FOUND`. Read-only.
+  Scans application source only — not docs, build tooling, or test fixtures —
+  so a control word in a planning note can't manufacture a false `CONFIRMED`.
 - **§3 covers claims that must be recomputed:** the section handled drift between
   two files and drift in a lone stale fact, but both assume the claim has a
   source you can re-read. A judgment about state — `status: complete`, `done`,

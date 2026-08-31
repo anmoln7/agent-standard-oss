@@ -32,14 +32,27 @@ mode="one"
 # "path:line:text" lines; awk keeps it macOS/Linux-safe (no grep -r --include).
 scan(){ # scan <pattern> <dir>  → matching lines on stdout
   local pat="$1" dir="$2"
-  # Exclude this script itself: its control patterns are written as literals
-  # here, so scanning a dir that contains it would report a false CONFIRMED.
+  # Scope to application SOURCE, not the whole tree. A word like "backup" in a
+  # planning doc or a release-notes test fixture is not a backup control; on a
+  # real repo those false hits dwarf the real ones and turn every control into a
+  # meaningless CONFIRMED. So restrict to source extensions and skip docs, build
+  # tooling, and test fixtures. Exclude this script itself — its control patterns
+  # are written here as literals and would self-match.
   grep -RInE --binary-files=without-match \
     --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor \
     --exclude-dir=.venv --exclude-dir=venv --exclude-dir=dist --exclude-dir=build \
     --exclude-dir=.next --exclude-dir=target --exclude-dir=.terraform \
+    --exclude-dir=.angular --exclude-dir=.svelte-kit --exclude-dir=.nuxt \
+    --exclude-dir=.cache --exclude-dir=coverage --exclude-dir=.turbo \
     --exclude-dir=.readiness-audit \
-    --exclude=absence-check \
+    --exclude-dir=docs --exclude-dir=doc --exclude-dir=tools --exclude-dir=scripts \
+    --exclude-dir=fixtures --exclude-dir=__fixtures__ --exclude-dir=e2e \
+    --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
+    --include='*.mjs' --include='*.cjs' --include='*.vue' --include='*.svelte' \
+    --include='*.py' --include='*.go' --include='*.rb' --include='*.java' \
+    --include='*.kt' --include='*.php' --include='*.cs' --include='*.rs' \
+    --include='*.scala' --include='*.sql' --include='*.prisma' \
+    --exclude='*.test.*' --exclude='*.spec.*' --exclude='*.map' --exclude='*.min.js' \
     -- "$pat" "$dir" 2>/dev/null
 }
 
@@ -47,9 +60,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
 # whether an off-source control's absence is NOT FOUND vs UNVERIFIED.
 owns_infra(){ # owns_infra <dir>  → exit 0 if the repo ships IaC
   local dir="$1"
-  scan '(^|/)(Dockerfile|docker-compose\.ya?ml|\.tf|\.tfvars|\.bicep|k8s|kustomization|helmfile|serverless\.ya?ml)' "$dir" \
-    >/dev/null 2>&1 && return 0
-  # extension/name shapes grep -E on content can miss: check filenames too.
+  # filename check below is the reliable signal; the content grep is a fallback.
   find "$dir" -type f \( -name '*.tf' -o -name '*.bicep' -o -name 'Dockerfile*' \
     -o -name 'docker-compose.y*ml' -o -name 'serverless.y*ml' \) \
     -not -path '*/.git/*' -print -quit 2>/dev/null | grep -q . && return 0
@@ -87,11 +98,11 @@ if [ "$mode" = "controls" ]; then
   dir="${1:-.}"
   # control | pattern | on/off-source (off = normally lives outside app code)
   report "auth"        '(authenticate|requireAuth|isAuthenticated|@login_required|ensureLoggedIn)' "$dir" on
-  report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit|throttle)'            "$dir" on
-  report "input-valid" '(zod|joi|yup|pydantic|validator|schema\.validate|express-validator)'       "$dir" on
-  report "backups"     '(pg_dump|mysqldump|backup|snapshot|point-in-time|PITR)'                     "$dir" off
-  report "alerting"    '(alert|pagerduty|opsgenie|sentry|datadog|prometheus)'                       "$dir" off
-  report "secrets-mgr" '(vault|secretsmanager|SSM|sops|doppler|\.env\.example)'                     "$dir" off
+  report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit)'                     "$dir" on
+  report "input-valid" '(zod|joi|yup|pydantic|express-validator|\.(parse|validate)\()'             "$dir" on
+  report "backups"     '(pg_dump|mysqldump|pg_basebackup|point-in-time|PITR)'                       "$dir" off
+  report "alerting"    '(pagerduty|opsgenie|@sentry|datadog|prometheus|createAlert)'               "$dir" off
+  report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler)'                    "$dir" off
   exit 0
 fi
 
