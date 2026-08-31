@@ -542,6 +542,17 @@ line="$("$BIN/absence-check" --controls "$pit_repo" | awk '$1=="backups"{print $
   && ok "'point-in-time' in a comment does not confirm a backup control" \
   || no "point-in-time comment should be NOT_FOUND, got: $line"
 
+# vendored third-party code (an installed Obsidian plugin bundle) is not the
+# repo's own source: a control inside .obsidian/plugins/*/main.js must not confirm.
+vend_repo="$TMP/acrepo-vendored"
+mkdir -p "$vend_repo/.obsidian/plugins/thino" "$vend_repo/src"
+printf 'export const app = 1\n'                 > "$vend_repo/src/app.ts"  # real source
+printf 'function requireAuth(){return isAuthenticated()}\n' > "$vend_repo/.obsidian/plugins/thino/main.js"
+line="$("$BIN/absence-check" --controls "$vend_repo" | awk '$1=="auth"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a control in a vendored .obsidian plugin does not confirm it" \
+  || no ".obsidian/plugins should not confirm auth, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

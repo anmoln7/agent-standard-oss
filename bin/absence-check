@@ -75,6 +75,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=tests --exclude-dir=test --exclude-dir=__tests__ \
     --exclude-dir=spec --exclude-dir=mod_test \
     --exclude-dir=chunks --exclude-dir=Resources --exclude-dir=.output \
+    --exclude-dir=.obsidian --exclude-dir=bower_components --exclude-dir=Pods \
     --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
     --include='*.mjs' --include='*.cjs' --include='*.vue' --include='*.svelte' \
     --include='*.py' --include='*.go' --include='*.rb' --include='*.java' \
