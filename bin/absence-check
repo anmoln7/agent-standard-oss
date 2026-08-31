@@ -57,6 +57,12 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
   # restrict to source extensions and skip docs, build tooling, and tests (across
   # JS/Python/Go/Rust/Ruby/Java conventions). Exclude this script itself — its
   # control patterns are written here as literals and would self-match.
+#
+# One class of false CONFIRMED remains that scoping cannot fix: a control name
+# used as DATA rather than as a control — "datadog" and "pagerduty" listed as
+# labels in an integrations picker, say. grep cannot tell the string from the
+# usage, so treat a CONFIRMED as "a known signal appears here", then read the
+# cited line to see whether it is the control or just its name.
   grep -RInE --binary-files=without-match \
     --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor \
     --exclude-dir=.venv --exclude-dir=venv --exclude-dir=dist --exclude-dir=build \
@@ -68,6 +74,7 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=fixtures --exclude-dir=__fixtures__ --exclude-dir=e2e \
     --exclude-dir=tests --exclude-dir=test --exclude-dir=__tests__ \
     --exclude-dir=spec --exclude-dir=mod_test \
+    --exclude-dir=chunks --exclude-dir=Resources --exclude-dir=.output \
     --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
     --include='*.mjs' --include='*.cjs' --include='*.vue' --include='*.svelte' \
     --include='*.py' --include='*.go' --include='*.rb' --include='*.java' \
@@ -76,7 +83,8 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude='*.test.*' --exclude='*.spec.*' --exclude='test_*.py' \
     --exclude='*_test.py' --exclude='*_test.go' --exclude='*_test.rs' \
     --exclude='*_test.rb' --exclude='*Test.java' --exclude='*Test.kt' \
-    --exclude='*.map' --exclude='*.min.js' \
+    --exclude='*.map' --exclude='*.min.js' --exclude='*.min.mjs' \
+    --exclude='*.bundle.*' --exclude='chunk-*' --exclude='*-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*.mjs' \
     -- "$pat" "$dir" 2>/dev/null
 }
 
@@ -142,7 +150,7 @@ if [ "$mode" = "controls" ]; then
   report "auth"        '(requireAuth|isAuthenticated|ensureLoggedIn|@login_required|authenticate\(|def authenticate|InstalledAppFlow|OAuth2?Flow)' "$dir" on
   report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit)'                     "$dir" on
   report "input-valid" '(from .?zod|from .?joi|from .?yup|import zod|pydantic|express-validator|z\.object|\.safeParse\()' "$dir" on
-  report "backups"     '(pg_dump|mysqldump|pg_basebackup|point-in-time|PITR)'                       "$dir" off
+  report "backups"     '(pg_dump|mysqldump|pg_basebackup|\bPITR\b|wal-g|barman)'                     "$dir" off
   report "alerting"    '(pagerduty|opsgenie|@sentry|datadog|prometheus|createAlert)'               "$dir" off
   report "secrets-mgr" '(hashicorp/vault|secretsmanager|getSecret|sops|doppler|service_account|client_secret|oauth2\.credentials|InstalledAppFlow|_CREDENTIALS)' "$dir" off
   exit 0

@@ -517,6 +517,31 @@ line="$("$BIN/absence-check" --controls "$empty_repo" | awk '$1=="auth"{print $2
   && ok "with scannable source present, a missing control is NOT_FOUND" \
   || no "with source, empty-scope auth should be NOT_FOUND, got: $line"
 
+# a bundled chunk (minified vendor code) is not the app's source: a control name
+# inside chunk-*.mjs or a Resources/ app bundle must not confirm a control.
+bundle_repo="$TMP/acrepo-bundle"
+mkdir -p "$bundle_repo/dist/chunks"
+printf 'const x=1\n' > "$bundle_repo/src/app.ts"  # real source so scope isn't empty
+printf 'var a=service_account,b=client_secret\n' > "$bundle_repo/dist/chunks/chunk-24HTWSHD.mjs"
+# the chunk is excluded, so this must NOT be CONFIRMED. With no IaC and secrets
+# being off-source, the honest verdict is UNVERIFIED — the point is it's not a
+# false CONFIRMED off a bundled file.
+line="$("$BIN/absence-check" --controls "$bundle_repo" | awk '$1=="secrets-mgr"{print $2}')"
+[ "$line" != "CONFIRMED" ] \
+  && ok "a control name in a bundled chunk does not confirm it (got $line)" \
+  || no "chunk-*.mjs should not confirm secrets, got: $line"
+
+# 'point-in-time' in a code comment is not a PITR backup control
+pit_repo="$TMP/acrepo-pit"
+mkdir -p "$pit_repo/src"
+printf '// returns a consistent point-in-time view of the store\nexport const q = 1\n' \
+  > "$pit_repo/src/store.ts"
+printf 'FROM node:20\n' > "$pit_repo/Dockerfile"
+line="$("$BIN/absence-check" --controls "$pit_repo" | awk '$1=="backups"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "'point-in-time' in a comment does not confirm a backup control" \
+  || no "point-in-time comment should be NOT_FOUND, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]
