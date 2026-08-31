@@ -483,6 +483,18 @@ line="$("$BIN/absence-check" --controls "$oauth_repo" | awk '$1=="secrets-mgr"{p
   && ok "inline OAuth credential handling confirms secrets, not a false NOT_FOUND" \
   || no "service_account/InstalledAppFlow should confirm secrets, got: $line"
 
+# a control that lives ONLY in a test file (any language convention) must not
+# confirm: a test exercising retry is not the source having rate limiting. The
+# citation would mislead even when the verdict happens to be right elsewhere.
+test_repo="$TMP/acrepo-tests"
+mkdir -p "$test_repo/src"
+printf 'def test_retry():\n    assert rate_limit(3)\n' > "$test_repo/src/test_retry.py"
+printf 'fn rate_limit_test() { let _ = rate_limit(); }\n' > "$test_repo/src/limiter_test.rs"
+line="$("$BIN/absence-check" --controls "$test_repo" | awk '$1=="rate-limit"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "a control only in test files (py/rs) does not confirm it" \
+  || no "test-only rate_limit should be NOT_FOUND, got: $line"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

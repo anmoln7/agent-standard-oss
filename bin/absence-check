@@ -48,11 +48,12 @@ mode="one"
 scan(){ # scan <pattern> <dir>  → matching lines on stdout
   local pat="$1" dir="$2"
   # Scope to application SOURCE, not the whole tree. A word like "backup" in a
-  # planning doc or a release-notes test fixture is not a backup control; on a
-  # real repo those false hits dwarf the real ones and turn every control into a
-  # meaningless CONFIRMED. So restrict to source extensions and skip docs, build
-  # tooling, and test fixtures. Exclude this script itself — its control patterns
-  # are written here as literals and would self-match.
+  # planning doc, or a control name in a test file, is not the control itself; on
+  # a real repo those hits dwarf the real ones — a test suite that exercises retry
+  # or secret-scrubbing buries the actual source under test-file citations. So
+  # restrict to source extensions and skip docs, build tooling, and tests (across
+  # JS/Python/Go/Rust/Ruby/Java conventions). Exclude this script itself — its
+  # control patterns are written here as literals and would self-match.
   grep -RInE --binary-files=without-match \
     --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor \
     --exclude-dir=.venv --exclude-dir=venv --exclude-dir=dist --exclude-dir=build \
@@ -62,12 +63,17 @@ scan(){ # scan <pattern> <dir>  → matching lines on stdout
     --exclude-dir=.readiness-audit \
     --exclude-dir=docs --exclude-dir=doc --exclude-dir=tools --exclude-dir=scripts \
     --exclude-dir=fixtures --exclude-dir=__fixtures__ --exclude-dir=e2e \
+    --exclude-dir=tests --exclude-dir=test --exclude-dir=__tests__ \
+    --exclude-dir=spec --exclude-dir=mod_test \
     --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
     --include='*.mjs' --include='*.cjs' --include='*.vue' --include='*.svelte' \
     --include='*.py' --include='*.go' --include='*.rb' --include='*.java' \
     --include='*.kt' --include='*.php' --include='*.cs' --include='*.rs' \
     --include='*.scala' --include='*.sql' --include='*.prisma' \
-    --exclude='*.test.*' --exclude='*.spec.*' --exclude='*.map' --exclude='*.min.js' \
+    --exclude='*.test.*' --exclude='*.spec.*' --exclude='test_*.py' \
+    --exclude='*_test.py' --exclude='*_test.go' --exclude='*_test.rs' \
+    --exclude='*_test.rb' --exclude='*Test.java' --exclude='*Test.kt' \
+    --exclude='*.map' --exclude='*.min.js' \
     -- "$pat" "$dir" 2>/dev/null
 }
 
