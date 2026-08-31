@@ -198,6 +198,7 @@ bin/                               reusable agent-workflow scripts (bash, no dep
   adopt                            friendly onboarding wizard (plain English, asks first)
   repo-audit                       read-only health report across your repos
   secrets-audit                    full-history secret scan of a repo, not just staged
+  absence-check                    prove a "not found" — zero hits ≠ absent off the repo's own surface
   pr-risk / pr-approve             classify a change routine vs novel; gate merges
   land-safely                      first-pass agent code to a clean reviewed PR
   crew / wt                        run parallel agent tasks; manage git worktrees

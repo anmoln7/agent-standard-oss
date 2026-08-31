@@ -1,0 +1,101 @@
+#!/bin/bash
+# absence-check — turn "I looked for X and did not find it" into a citable fact.
+#
+#   absence-check <pattern> [dir]     # one control; prints a verdict line
+#   absence-check --controls [dir]    # the built-in control set (backups, auth, …)
+#   absence-check --json <pattern> [dir]
+#
+# The most dangerous claim an audit makes is a confident absence. An agent asked
+# what is missing will happily assert "there is no rate limiting" when it simply
+# did not grep for the right thing. This does that grep deterministically: it
+# records the pattern searched, the hit count, and up to a few paths, so a
+# "not found" claim can cite a reproducible zero rather than the model's memory.
+#
+# The scope rule is the important part. A zero-hit result is NOT automatically
+# NOT FOUND. Controls that live outside a source repo (backups, PITR, alert
+# routing) are UNVERIFIED on a zero hit — UNLESS the repo ships infrastructure
+# as code, in which case the repo owns that surface and the miss becomes a real
+# NOT FOUND. Silence off the surface the repo owns is never reported as absent.
+#
+# Read-only: greps and reports, writes nothing. Exit 0 always (a verdict is not
+# a failure); use the printed state, not the exit code.
+set -uo pipefail
+
+# ── argument parse ───────────────────────────────────────────────────────────
+json=0
+[ "${1:-}" = "--json" ] && { json=1; shift; }
+
+mode="one"
+[ "${1:-}" = "--controls" ] && { mode="controls"; shift; }
+
+# grep across a repo's text files, excluding the usual noise. Prints matching
+# "path:line:text" lines; awk keeps it macOS/Linux-safe (no grep -r --include).
+scan(){ # scan <pattern> <dir>  → matching lines on stdout
+  local pat="$1" dir="$2"
+  # Exclude this script itself: its control patterns are written as literals
+  # here, so scanning a dir that contains it would report a false CONFIRMED.
+  grep -RInE --binary-files=without-match \
+    --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=vendor \
+    --exclude-dir=.venv --exclude-dir=venv --exclude-dir=dist --exclude-dir=build \
+    --exclude-dir=.next --exclude-dir=target --exclude-dir=.terraform \
+    --exclude-dir=.readiness-audit \
+    --exclude=absence-check \
+    -- "$pat" "$dir" 2>/dev/null
+}
+
+# Does the repo own infrastructure? (IaC / deploy config present.)  Decides
+# whether an off-source control's absence is NOT FOUND vs UNVERIFIED.
+owns_infra(){ # owns_infra <dir>  → exit 0 if the repo ships IaC
+  local dir="$1"
+  scan '(^|/)(Dockerfile|docker-compose\.ya?ml|\.tf|\.tfvars|\.bicep|k8s|kustomization|helmfile|serverless\.ya?ml)' "$dir" \
+    >/dev/null 2>&1 && return 0
+  # extension/name shapes grep -E on content can miss: check filenames too.
+  find "$dir" -type f \( -name '*.tf' -o -name '*.bicep' -o -name 'Dockerfile*' \
+    -o -name 'docker-compose.y*ml' -o -name 'serverless.y*ml' \) \
+    -not -path '*/.git/*' -print -quit 2>/dev/null | grep -q . && return 0
+  return 1
+}
+
+# state <hitcount> <off_source> <dir>  → CONFIRMED | NOT_FOUND | UNVERIFIED
+verdict(){
+  local hits="$1" off="$2" dir="$3"
+  if [ "$hits" -gt 0 ]; then echo "CONFIRMED"; return; fi
+  # zero hits. off-source controls need the repo to own the surface.
+  if [ "$off" = "off" ] && ! owns_infra "$dir"; then echo "UNVERIFIED"; else echo "NOT_FOUND"; fi
+}
+
+# report <label> <pattern> <dir> <off_source>
+report(){
+  local label="$1" pat="$2" dir="$3" off="$4"
+  local matches count first state
+  matches="$(scan "$pat" "$dir")"
+  count="$(printf '%s' "$matches" | grep -c . )"
+  state="$(verdict "$count" "$off" "$dir")"
+  first="$(printf '%s\n' "$matches" | head -3 | cut -d: -f1-2 | paste -sd'; ' -)"
+  if [ "$json" = 1 ]; then
+    printf '{"control":"%s","pattern":"%s","hits":%s,"state":"%s","paths":"%s"}\n' \
+      "$label" "$pat" "$count" "$state" "$first"
+  else
+    printf '%-14s %-11s hits=%-3s %s\n' "$label" "$state" "$count" "$first"
+  fi
+}
+
+dir="${2:-.}"
+[ "$mode" = "one" ] && dir="${2:-.}"
+
+if [ "$mode" = "controls" ]; then
+  dir="${1:-.}"
+  # control | pattern | on/off-source (off = normally lives outside app code)
+  report "auth"        '(authenticate|requireAuth|isAuthenticated|@login_required|ensureLoggedIn)' "$dir" on
+  report "rate-limit"  '(rateLimit|rate_limit|RateLimiter|express-rate-limit|throttle)'            "$dir" on
+  report "input-valid" '(zod|joi|yup|pydantic|validator|schema\.validate|express-validator)'       "$dir" on
+  report "backups"     '(pg_dump|mysqldump|backup|snapshot|point-in-time|PITR)'                     "$dir" off
+  report "alerting"    '(alert|pagerduty|opsgenie|sentry|datadog|prometheus)'                       "$dir" off
+  report "secrets-mgr" '(vault|secretsmanager|SSM|sops|doppler|\.env\.example)'                     "$dir" off
+  exit 0
+fi
+
+pat="${1:-}"
+[ -n "$pat" ] || { echo "usage: absence-check <pattern> [dir]  |  absence-check --controls [dir]"; exit 1; }
+# a bare pattern is treated as on-source (its absence is NOT FOUND on zero hits).
+report "$pat" "$pat" "$dir" on

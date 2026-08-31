@@ -7,6 +7,14 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **`bin/absence-check` — prove a "not found" instead of asserting it:** the
+  most dangerous claim an audit makes is a confident absence. This greps a repo
+  for a control deterministically and records the pattern, the hit count, and
+  the paths, so a "not found" cites a reproducible zero rather than the agent's
+  memory. The scope rule is the point: a zero hit is `NOT_FOUND` only when the
+  repo owns the surface the control would live on — off-source controls (backups,
+  alerting, secrets) stay `UNVERIFIED` until the repo ships infrastructure as
+  code, at which point the same miss becomes a real `NOT_FOUND`. Read-only.
 - **§3 covers claims that must be recomputed:** the section handled drift between
   two files and drift in a lone stale fact, but both assume the claim has a
   source you can re-read. A judgment about state — `status: complete`, `done`,

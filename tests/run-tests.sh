@@ -384,6 +384,42 @@ printf '#!/bin/bash\necho hi\n' > "$TMP/gate-widen/templates/git/hooks/pre-push"
 [ "$?" -eq 1 ] && ok "a new file inside CI's glob that the doc misses fails" \
   || no "widened CI glob should fail"
 
+# ── absence-check: zero hits ≠ absent unless the repo owns the surface ───────
+echo "absence-check:"
+ac_repo="$TMP/acrepo"
+mkdir -p "$ac_repo/src"
+printf 'export function requireAuth(){}\n' > "$ac_repo/src/auth.ts"
+printf 'const x = 1\n'                      > "$ac_repo/src/app.ts"
+
+state(){ "$BIN/absence-check" --json "$1" "$2" | sed -E 's/.*"state":"([^"]+)".*/\1/'; }
+
+[ "$(state 'requireAuth' "$ac_repo")" = "CONFIRMED" ] \
+  && ok "a found control is CONFIRMED" || no "requireAuth should be CONFIRMED"
+
+# off-source control, no IaC in the repo → UNVERIFIED, never a false NOT_FOUND
+line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2}')"
+[ "$line" = "UNVERIFIED" ] \
+  && ok "an off-source control with no IaC is UNVERIFIED, not absent" \
+  || no "backups with no IaC should be UNVERIFIED, got: $line"
+
+# on-source control: its absence in app code IS evidence, so NOT_FOUND even w/o IaC
+line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="rate-limit"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "an on-source control missing from app code is NOT_FOUND without IaC" \
+  || no "rate-limit with no IaC should be NOT_FOUND, got: $line"
+
+# add IaC → the repo now owns that surface → the same miss becomes NOT_FOUND
+printf 'FROM node:20\n' > "$ac_repo/Dockerfile"
+line="$("$BIN/absence-check" --controls "$ac_repo" | awk '$1=="backups"{print $2}')"
+[ "$line" = "NOT_FOUND" ] \
+  && ok "the same miss becomes NOT_FOUND once the repo ships IaC" \
+  || no "backups with IaC should be NOT_FOUND, got: $line"
+
+# the script must not report its own control literals as a match
+[ "$(state 'RateLimiter' "$BIN")" = "NOT_FOUND" ] \
+  && ok "scanning bin/ does not self-match the control patterns" \
+  || no "absence-check should exclude itself from the scan"
+
 echo ""
 echo "passed: $pass, failed: $fail"
 [ "$fail" -eq 0 ]

@@ -52,6 +52,16 @@ useless, the fix is upstream: find the AGENTS.md line that left "good" undefined
 sharpen it, then re-run. The result is a mirror of the instruction; treat a bad one
 as a pointer back to the spec, not as noise to retry through.
 
+One caution sits under all three triggers. When the audit reports that something is
+**absent** — a control, a convention, a required line — where you looked decides
+whether that silence means anything. An unknown becomes a "not found" only when the
+surface the thing would live on is one the repo actually owns: a missing backup rule
+is a real gap in infrastructure the repo ships, but nothing at all in application
+code that would never carry it. Outside the surface it owns, silence stays unknown —
+never reported as absent. An audit that skips this promotes every gap it failed to
+search into a false absence, which is the same confident-but-untrue failure the
+three-state frame exists to catch.
+
 ## Evidence
 
 Findings from a source audit of NVIDIA-labs OO Agents (NOOA, `NVIDIA-NeMo/labs-OO-Agents`,
