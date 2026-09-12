@@ -192,6 +192,7 @@ install.sh                         one-line installer (curl | bash, no sudo)
 .gitattributes                     forces LF on all files (Windows/CRLF checkouts)
 VERSION                            single source of truth for the release version
 .claude-plugin/ + commands/        Claude Code plugin: /agent-standard:adopt, :check
+.codex-plugin/ + .cursor-plugin/   the same plugin for Codex and Cursor (one source, many hosts)
 AGENTS.md                          this repo's own instruction file (dogfooding the standard)
 docs/solutions/                    this repo's own fix log — real past bugs, one per file
 bin/                               reusable agent-workflow scripts (bash, no deps)
@@ -209,7 +210,7 @@ tests/
   run-tests.sh                     plain-bash tests for the scripts (run in CI)
 templates/
   docs/solutions/EXAMPLE-*.md      two worked fix-log entries with the required frontmatter
-  hooks/                           SessionStart self-healing hook; review-gate + ratchet gates (§2)
+  hooks/                           SessionStart self-healing hook; review-gate, ratchet, guard-large-read gates (§2)
   git/                             a pre-commit secret-scan hook and a gitignore starter
 examples/
   AGENTS.md                        a worked AGENTS.md that follows the standard

@@ -1,8 +1,10 @@
 #!/bin/bash
 # sync-version — one version, derived everywhere. The VERSION file at the repo
-# root is the single source of truth; this writes it into the three files that
-# also carry the string so they can't drift by hand-edit:
-#   .claude-plugin/plugin.json, .claude-plugin/marketplace.json, README.md
+# root is the single source of truth; this writes it into every file that also
+# carries the string so they can't drift by hand-edit:
+#   .claude-plugin/plugin.json, .claude-plugin/marketplace.json,
+#   .codex-plugin/plugin.json, .cursor-plugin/plugin.json,
+#   .cursor-plugin/marketplace.json, README.md
 #
 #   sync-version           # rewrite the derived files from VERSION
 #   sync-version --check    # exit non-zero if any derived file is out of sync
@@ -21,8 +23,15 @@ fi
 check=""
 [ "${1:-}" = "--check" ] && check=1
 
-plugin="$ROOT/.claude-plugin/plugin.json"
-mkt="$ROOT/.claude-plugin/marketplace.json"
+# Every JSON manifest that carries "version": "X.Y.Z". The first such field in
+# each file is the plugin version (host manifests put it at the top level).
+json_files="
+.claude-plugin/plugin.json
+.claude-plugin/marketplace.json
+.codex-plugin/plugin.json
+.cursor-plugin/plugin.json
+.cursor-plugin/marketplace.json
+"
 readme="$ROOT/README.md"
 
 # The one README occurrence is the CI-example pin: agent-standard-oss@vX.Y.Z
@@ -34,21 +43,17 @@ sed_i() {  # sed_i <expr> <file>  — BSD and GNU compatible
 drift=0
 report() { echo "version drift: $1 has '$2', VERSION has '$VER'" >&2; drift=1; }
 
-# plugin.json
-cur="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$plugin" | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
-if [ -n "$check" ]; then
-  [ "$cur" = "$VER" ] || report "plugin.json" "$cur"
-else
-  sed_i "s/\"version\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"version\": \"$VER\"/" "$plugin"
-fi
-
-# marketplace.json
-cur="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$mkt" | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
-if [ -n "$check" ]; then
-  [ "$cur" = "$VER" ] || report "marketplace.json" "$cur"
-else
-  sed_i "s/\"version\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"version\": \"$VER\"/" "$mkt"
-fi
+# the version field in each JSON manifest (first occurrence = the plugin version)
+for rel in $json_files; do
+  f="$ROOT/$rel"
+  [ -f "$f" ] || { echo "sync-version: missing $rel" >&2; drift=1; continue; }
+  cur="$(grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' "$f" | head -1 | sed 's/.*"\([^"]*\)"$/\1/')"
+  if [ -n "$check" ]; then
+    [ "$cur" = "$VER" ] || report "$rel" "$cur"
+  else
+    sed_i "s/\"version\"[[:space:]]*:[[:space:]]*\"[^\"]*\"/\"version\": \"$VER\"/" "$f"
+  fi
+done
 
 # README.md CI-example pin
 cur="$(grep -o 'agent-standard-oss@v[0-9][0-9A-Za-z.-]*' "$readme" | head -1 | sed 's/.*@v//')"
@@ -62,4 +67,4 @@ if [ -n "$check" ]; then
   [ "$drift" -eq 0 ] && echo "sync-version: all derived files match VERSION ($VER)"
   exit "$drift"
 fi
-echo "sync-version: wrote $VER to plugin.json, marketplace.json, README.md"
+echo "sync-version: wrote $VER to all plugin manifests + README.md"

@@ -426,6 +426,20 @@ goes for workflows: a multi-step incantation agents keep re-deriving (how to
 kick off a review, how to run one targeted test) gets compiled into a small
 script in the repo's `bin/`, pointed to from `AGENTS.md`.
 
+A hook only bites the surface it watches. A `PreToolUse` hook that gates the
+`Read` tool is bypassed the moment the agent reaches the same file through
+`cat`/`head`/`tail`/`less` in a `Bash` call — same capability, different
+surface, and the guard never fires. So **guard every surface that reaches the
+capability, not just the obvious one**: pair the `Read`-tool gate with a `Bash`
+gate that catches the shell path, and let genuinely targeted access through
+(a `Read` with an `offset`/`limit`, a `cat` that pipes or redirects rather than
+dumping into context) so the guard blocks the bypass without blocking real
+work. `templates/hooks/scripts/guard-large-read.sh` is a copy-in pair
+implementing exactly this — one script, two matchers. The rule generalizes past
+this one case: any hook enforcing a limit has to be checked against the cheapest
+way around it, because an agent under a blocked path will find that way without
+being told to.
+
 **Add entries one at a time.** Write a fix-log entry right after the incident,
 while the cause is fresh. The highest-signal trigger is a human correcting the
 agent on something the instructions should have prevented: log it and promote

@@ -16,7 +16,8 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   plugin manifests and README pin; the second pins the commands documented below
   to the CI steps that run them.
 - `VERSION` — single source of truth for the release version; `bin/sync-version`
-  writes it into the two `.claude-plugin/*.json` files and the README CI-example pin.
+  writes it into every plugin manifest (`.claude-plugin/`, `.codex-plugin/`,
+  `.cursor-plugin/`) and the README CI-example pin.
 - `templates/` — files users copy into their repos (hooks, gitignore, fix-log
   example, acceptance-criteria contract).
 - `examples/AGENTS.md` — a worked example for a fictional repo; keep it in lockstep
@@ -28,7 +29,9 @@ the skeleton in [STANDARD.md §1](STANDARD.md#1-one-source-of-truth).
   (stdin is the pipe) and touch nothing outside `$HOME`.
 - `.claude-plugin/` + `commands/` — the repo is also a Claude Code plugin
   (`/agent-standard:adopt`, `/agent-standard:check`); commands reach the scripts
-  via `${CLAUDE_PLUGIN_ROOT}/bin/`.
+  via `${CLAUDE_PLUGIN_ROOT}/bin/`. `.codex-plugin/` and `.cursor-plugin/` are the
+  same plugin's manifests for Codex and Cursor — one `commands/` + `bin/` source,
+  three host front-ends (the single-source rule applied to plugin manifests).
 - `.github/workflows/pages.yml` + `.github/pages.css` — pandoc-built site
   (STANDARD.md + ADOPTERS.md) deployed to anmoln7.github.io/agent-standard-oss.
 - `.gitattributes` — forces LF on every text file (`* text=auto eol=lf`) so a CRLF
@@ -79,9 +82,11 @@ change and its output quoted — not when the edit looks right.
 
 - Add/rename a `bin/` script → update the README "What's in the box" tree and CHANGELOG.
 - Tag a release → edit the `VERSION` file and run `bin/sync-version`; it derives the
-  version into `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and the
-  README "Enforce it in CI" pin. CI runs `sync-version --check` to catch any hand-edit
-  that drifts from `VERSION`.
+  version into all five plugin manifests (`.claude-plugin/`, `.codex-plugin/`,
+  `.cursor-plugin/`) and the README "Enforce it in CI" pin. CI runs
+  `sync-version --check` to catch any hand-edit that drifts from `VERSION`.
+  Add a new version-carrying JSON manifest → add its path to `json_files` in
+  `bin/sync-version`, or it drifts silently.
 - Workflow `uses:` lines stay pinned to a commit SHA with a `# vN` comment — never a
   bare mutable tag.
 - Change the AGENTS.md skeleton in STANDARD.md §1 → update `examples/AGENTS.md` (and this file).

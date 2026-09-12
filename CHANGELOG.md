@@ -7,6 +7,25 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **§2 — guard every surface that reaches a capability, not just the obvious
+  one:** a `PreToolUse` hook that gates the `Read` tool is bypassed the instant
+  the agent reaches the same file through `cat`/`head`/`tail` in a `Bash` call.
+  The section now names the failure and the fix: pair the tool-surface gate with
+  a shell-surface gate, and let genuinely targeted access through (a `Read` with
+  an offset/limit, a `head -n`, a piped or redirected `cat`) so the guard blocks
+  the bypass without blocking real work.
+- **`templates/hooks/scripts/guard-large-read.sh`:** a copy-in hook implementing
+  the two-surface guard above — one script, matched against both `Read` and
+  `Bash`, blocks whole-file dumps over a line threshold (`GUARD_MAX_LINES`,
+  default 350) and lets targeted reads pass. Read-only; fails open if `jq` is
+  absent.
+- **Codex and Cursor plugin manifests (`.codex-plugin/`, `.cursor-plugin/`):**
+  the repo already shipped as a Claude Code plugin; it now ships the same
+  `commands/` + `bin/` source as a plugin for Codex and Cursor too — one source,
+  three host front-ends, the single-source rule applied to plugin manifests.
+  `bin/sync-version` now derives `VERSION` into all five manifests (and its
+  `--check` gate covers them), so the added version strings can't drift by hand.
+
 - **`bin/absence-check` — prove a "not found" instead of asserting it:** the
   most dangerous claim an audit makes is a confident absence. This greps a repo
   for a control deterministically and records the pattern, the hit count, and
