@@ -128,6 +128,18 @@ level_gap(){
   esac
 }
 level_name(){ case "$1" in 0) echo "unharnessed";; 1) echo "documented";; 2) echo "structured";; *) echo "safe";; esac; }
+# The whole climb, with the current rung bracketed — so L3 reads as "top of four",
+# not jargon. $1 is the current level (0-3).
+level_ladder(){
+  local cur="$1" out="" i name
+  for i in 0 1 2 3; do
+    name="L$i $(level_name "$i")"
+    [ "$i" = "$cur" ] && name="[$name]"
+    [ -n "$out" ] && out="$out › "
+    out="$out$name"
+  done
+  printf '%s' "$out"
+}
 
 score=0
 scorecard_json(){
@@ -178,6 +190,7 @@ scorecard(){
   local lvl; lvl="$(level)"
   echo "   ──────────────────────────────────────────────────────────"
   echo "   level: ${BOLD}L${lvl} · $(level_name "$lvl")${RST}   score: $n/6  $bar"
+  echo "   ladder: ${DIM}$(level_ladder "$lvl")${RST}"
   # Level (shape) drives the headline, not the raw count — a repo that leaks
   # secrets is never "almost perfect", however many other checks it passes.
   case "$lvl" in

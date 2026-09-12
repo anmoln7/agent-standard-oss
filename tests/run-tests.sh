@@ -116,6 +116,18 @@ lvl="$("$BIN/adopt" --check --json 2>/dev/null | sed 's/.*"level":\([0-9]*\).*/\
 "$BIN/adopt" --check --json 2>/dev/null | grep -q '"id":"STD-05"' \
   && ok "--json exposes stable check IDs (STD-05)" || no "STD-05 id missing from --json"
 
+# The checkup prints the whole L0-L3 ladder with the current rung bracketed, so a
+# reader sees where a level sits without opening the spec. Here the repo is L3
+# (secret hygiene was just added above), so L3 must be the bracketed rung and no
+# other. Strip color codes before matching.
+ladder="$("$BIN/adopt" --check 2>/dev/null | sed $'s/\033\\[[0-9;]*m//g' | grep 'ladder:')"
+echo "$ladder" | grep -q 'L0 unharnessed' && echo "$ladder" | grep -q 'L3 safe' \
+  && ok "checkup prints the full L0-L3 ladder" || no "ladder line missing a rung: '$ladder'"
+echo "$ladder" | grep -q '\[L3 safe\]' \
+  && ok "ladder brackets the current rung (L3)" || no "L3 not bracketed as current: '$ladder'"
+echo "$ladder" | grep -qE '\[L[012] ' \
+  && no "a non-current rung is bracketed: '$ladder'" || ok "only the current rung is bracketed"
+
 # ── crew: CREW_MAX_PARALLEL caps a batch, remainder stays queued ─────────────
 echo "crew:"
 mkdir -p "$TMP/shim"
