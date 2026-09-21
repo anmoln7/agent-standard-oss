@@ -5,6 +5,24 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ## [Unreleased]
 
+### Changed
+
+- **§1 skeleton: add `## Commit flow` and `## Diagrams` as conditional sections.**
+  The published skeleton listed six sections, but nearly every repo using the
+  standard grows a Commit-flow one-liner (deferring to §6) and a Diagrams pointer —
+  and the standard's own `AGENTS.md` already carried Commit flow while the skeleton
+  it published did not. The skeleton now matches practice, with both marked
+  explicitly **conditional**: Commit flow earns its place only when a repo diverges
+  from §6's default or carries an account/deploy note, and Diagrams exists only when
+  diagrams do — an empty heading is ceremony, not compliance.
+- **§1 "Before shipping": name the strongest ship-gate form.** The gate guidance now
+  points at a named, seconds-fast command whose exit code *is* the definition of done
+  (`make check` / `npm run verify` / `./ship`, "exit 0 or the work is not done"),
+  with the slow browser/e2e/build checks split into a separate deploy gate so the
+  commit gate stays fast enough to actually get run. This is the least-filled-in part
+  of the skeleton in practice, so the spec now asks for a real command, not a
+  paragraph describing one.
+
 ### Added
 
 - **§2 — guard every surface that reaches a capability, not just the obvious

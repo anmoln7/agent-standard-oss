@@ -99,13 +99,32 @@ The traps. (See docs/solutions/ for the full fix log.)
 
 ## Before shipping
 The ship gate, in order: static → behavior → system. A failure stops the run.
+Name the exact command(s); prefer one entry point (see "What Before shipping has
+to say" below).
 
 ## Keep in sync
 <see section 3>
+
+## Commit flow
+One or two lines: the repo's default (commit straight to `main`, or branch + PR),
+deferring to §6 for the rule. Only the repo-specific part belongs here — the
+account/deploy note, or "this repo branches because X."
+
+## Diagrams
+Where the architecture/data-flow diagrams live, if the repo has them (e.g.
+`docs/diagrams/` — mermaid source + rendered images). Omit the section entirely
+when there are none.
 ```
 
 Keep AGENTS.md scannable. Anything that is a *specific past incident* goes in
 `docs/solutions/`, not inline. That keeps AGENTS.md from growing without bound.
+
+The last two sections are **conditional, not mandatory**. `## Commit flow` earns
+its place only when the repo diverges from §6's default or carries an
+account/deploy note; a repo that just follows the default needs no section.
+`## Diagrams` exists only when diagrams do — an empty "Diagrams" heading is the
+ceremony §3 warns against, not compliance. They are in the skeleton because nearly
+every repo grows them, not because every repo must.
 
 Write hard rules with their exceptions attached: "never commit secrets, except
 `.env.example`" survives contact with edge cases; a bare NEVER gets ignored the
@@ -170,6 +189,17 @@ needs layer 3, because that's the boundary unit tests are least likely to cover.
 
 Repos that can express the whole ladder as one command should: `make check`, one
 script, one entry point. A single command is a gate an agent can't partially run.
+
+The strongest form is a **named, seconds-fast command whose exit code *is* the
+definition of done** — `make check`, `npm run verify`, `./ship` — stated in
+`AGENTS.md` as "exit 0 or the work is not done." Two properties do the work: it is
+one command (can't be partially run, above), and it is fast enough that it actually
+gets run every time — a gate slow enough to skip is a gate that gets skipped, so
+push the slow browser/e2e/build checks into a separate *deploy* gate and keep the
+*commit* gate lean. Write down what each gate covers and when it runs. This is the
+single least-adopted part of the standard in practice — most repos leave the
+"Before shipping" section as a placeholder — so make it a real command, not a
+paragraph describing one.
 
 ### The environment is part of the harness
 
