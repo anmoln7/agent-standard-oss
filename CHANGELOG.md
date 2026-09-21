@@ -25,6 +25,14 @@ All notable changes to agent-standard are documented here. Versions follow
 
 ### Added
 
+- **`adopt --check`: an advisory note for unpushed / unbacked work.** Work that
+  lives on one disk isn't durable (§6 — commit *and* push). The checkup now surfaces,
+  as a note, a repo with no remote, a branch with no upstream, or commits not pushed
+  to the remote. It is **advisory only** — read-only git, on the same non-scoring
+  channel as the fix-log note, and it never touches the score, the L0–L3 level, or
+  the `STD-01`…`STD-06` checks (their IDs stay a stable contract). Account
+  correctness remains `gh-check`'s job, not this one.
+
 - **§2 — guard every surface that reaches a capability, not just the obvious
   one:** a `PreToolUse` hook that gates the `Read` tool is bypassed the instant
   the agent reaches the same file through `cat`/`head`/`tail` in a `Bash` call.

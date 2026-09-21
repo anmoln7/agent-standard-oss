@@ -128,6 +128,23 @@ echo "$ladder" | grep -q '\[L3 safe\]' \
 echo "$ladder" | grep -qE '\[L[012] ' \
   && no "a non-current rung is bracketed: '$ladder'" || ok "only the current rung is bracketed"
 
+# Advisory (non-scoring): the checkup warns about unpushed / unbacked work (§6) but
+# NEVER lets it move the score. Build a repo with commits and no remote.
+mkdir -p "$TMP/nopush" && cd "$TMP/nopush" && git init -q
+printf '# x\n## Keep in sync\n- a\n' > AGENTS.md
+printf '@AGENTS.md\n' > CLAUDE.md
+printf '.env\n' > .gitignore
+mkdir -p docs/solutions
+git add -A && git -c user.email=t@t.t -c user.name=t commit -qm init
+before_lvl="$("$BIN/adopt" --check --json 2>/dev/null | sed 's/.*"level":\([0-9]*\).*/\1/')"
+"$BIN/adopt" --check 2>/dev/null | grep -q 'no git remote' \
+  && ok "checkup warns about a repo with no remote" || no "no unbacked-work note on a remoteless repo"
+# adding a remote (still nothing pushed) → the note changes but the level does not
+git remote add origin "$TMP/nopush.git"
+after_lvl="$("$BIN/adopt" --check --json 2>/dev/null | sed 's/.*"level":\([0-9]*\).*/\1/')"
+[ "$before_lvl" = "$after_lvl" ] \
+  && ok "push-state advisory does not change the score" || no "push state moved the level $before_lvl→$after_lvl"
+
 # ── crew: CREW_MAX_PARALLEL caps a batch, remainder stays queued ─────────────
 echo "crew:"
 mkdir -p "$TMP/shim"

@@ -69,6 +69,29 @@ c_fixlog() { [ -d docs/solutions ]; }                                 # STD-04
 # Count fix-log entries missing a §2-required field. Advisory only — never
 # feeds the score. EXAMPLE-* are the shipped templates, not the repo's own
 # entries, so they don't count as drift.
+# Advisory only — NOT a scored check. Work that lives on one disk isn't durable;
+# §6 says complete the loop (commit AND push). This surfaces two states: a repo
+# with no remote at all, and a branch with commits its upstream doesn't have.
+# Read-only git; account correctness is gh-check's job, not this one. Empty output
+# means nothing to say (no git, or everything pushed).
+push_state(){
+  git rev-parse --git-dir >/dev/null 2>&1 || return 0
+  # any remote configured at all?
+  if [ -z "$(git remote 2>/dev/null)" ]; then
+    # a repo with commits but no remote is unbacked-up; a fresh empty repo isn't
+    git rev-parse HEAD >/dev/null 2>&1 && echo "no git remote — this work exists on one disk only (git remote add …, then push)"
+    return 0
+  fi
+  # on a branch with an upstream, are there commits not pushed?
+  if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+    local ahead; ahead="$(git rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+    [ "${ahead:-0}" -gt 0 ] && echo "$ahead commit(s) not pushed to the remote (git push)"
+  else
+    # a branch tracking nothing, in a repo that does have a remote
+    git rev-parse HEAD >/dev/null 2>&1 && echo "current branch has no upstream — its commits aren't backed up (git push -u origin …)"
+  fi
+}
+
 fixlog_thin(){
   [ -d docs/solutions ] || return 0
   local f n=0 base
@@ -208,6 +231,12 @@ scorecard(){
     if [ -n "$thin" ]; then
       echo ""
       echo "   ${DIM}note: $thin — see STANDARD.md §2 for the required fields${RST}"
+    fi
+    # Advisory, non-scoring (§6): unpushed / unbacked work. Never affects the score.
+    local push; push="$(push_state)"
+    if [ -n "$push" ]; then
+      echo ""
+      echo "   ${DIM}note: $push${RST}"
     fi
     if [ -n "$missed" ]; then
       echo ""
